@@ -386,7 +386,7 @@ let enemies = [];
 let coins = [];
 let powerups = [];
 let particles = [];
-let popups = [];
+let flyCoins = [];      // monedele care zboară spre scor după ce sunt luate ⭐
 let camX = 0;
 let score = 0;
 let lives = LIVES_START;
@@ -494,7 +494,7 @@ function loadLevel(idx) {
   theme = LEVELS[idx].theme;
   levelW = Math.max(...rows.map(r => r.length));
   grid = [];
-  enemies = []; coins = []; powerups = []; particles = []; popups = [];
+  enemies = []; coins = []; powerups = []; particles = []; flyCoins = [];
   fireballs = []; glasses = []; rampSteps = [];
   boss = null; helper = null; flagX = 0;
   for (let r = 0; r < ROWS; r++) {
@@ -615,6 +615,10 @@ function moveBody(b, dt, isPlayer, grav) {
   }
 }
 
+function spawnFlyCoin(x, y) {
+  flyCoins.push({ x, y, t: 0, dur: 0.5 + Math.random()*0.15 });
+}
+
 function hitBlockAbove(r, b) {
   const cMid = Math.floor((b.x + b.w/2) / TILE);
   for (const c of [cMid, Math.floor((b.x+4)/TILE), Math.floor((b.x+b.w-4)/TILE)]) {
@@ -623,7 +627,7 @@ function hitBlockAbove(r, b) {
     if (t === 3) {            // bloc ? → monedă
       grid[r][c] = 5;
       score += 10;
-      popups.push({ x:c*TILE+TILE/2, y:r*TILE, vy:-500, t:0.6 });
+      spawnFlyCoin(c*TILE+TILE/2, r*TILE);
       sfx.coin();
       return;
     }
@@ -730,6 +734,7 @@ function update(dt) {
     const cx = cn.c*TILE + TILE/2, cy = cn.r*TILE + TILE/2;
     if (Math.abs(p.x + p.w/2 - cx) < TILE*0.55 && Math.abs(p.y + p.h/2 - cy) < TILE*0.6) {
       cn.taken = true; score += 10; sfx.coin();
+      spawnFlyCoin(cx, cy);
       for (let i=0;i<6;i++) particles.push({ x:cx, y:cy, vx:(Math.random()-0.5)*200, vy:-Math.random()*250, t:0.5, col:'#ffd700' });
     }
   }
@@ -979,8 +984,8 @@ function updateFX(dt) {
 
   for (const pt of particles) { pt.t -= dt; pt.x += pt.vx*dt; pt.y += pt.vy*dt; pt.vy += 800*dt; }
   particles = particles.filter(pt => pt.t > 0);
-  for (const pp of popups) { pp.t -= dt; pp.y += pp.vy*dt; pp.vy += 1400*dt; }
-  popups = popups.filter(pp => pp.t > 0);
+  for (const fc of flyCoins) fc.t += dt;
+  flyCoins = flyCoins.filter(fc => fc.t < fc.dur);
 
   if (state === 'levelend' && stateTimer > 2.2) {
     levelIdx++;
@@ -1080,7 +1085,14 @@ function draw() {
     if (cn.taken) continue;
     drawCoin(cn.c*TILE + TILE/2, cn.r*TILE + TILE/2, cn.anim);
   }
-  for (const pp of popups) drawCoin(pp.x, pp.y, time*10);
+  for (const fc of flyCoins) {
+    const frac = Math.min(1, fc.t / fc.dur);
+    const e = 1 - Math.pow(1 - frac, 3);
+    const tx = camX + 48, ty = 39;
+    const x = fc.x + (tx - fc.x) * e;
+    const y = fc.y + (ty - fc.y) * e - Math.sin(frac * Math.PI) * 40;   // arc ușor spre scor ⭐
+    drawCoin(x, y, time*10, 1 - frac*0.6);
+  }
   for (const pu of powerups) drawPowerup(pu);
   for (const fb of fireballs) {
     ctx.fillStyle = '#ff9f1c';
@@ -1239,13 +1251,14 @@ function drawTile(t, x, y) {
   }
 }
 
-function drawCoin(x, y, anim) {
+function drawCoin(x, y, anim, scale) {
+  scale = scale || 1;
   const sq = Math.abs(Math.sin(anim));
-  const w = 12 * sq + 3;
+  const w = (12 * sq + 3) * scale;
   ctx.fillStyle = '#f8b800';
-  ctx.beginPath(); ctx.ellipse(x, y, w, 15, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x, y, w, 15*scale, 0, 0, Math.PI*2); ctx.fill();
   ctx.fillStyle = '#ffe27a';
-  ctx.beginPath(); ctx.ellipse(x, y, w*0.55, 9, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x, y, w*0.55, 9*scale, 0, 0, Math.PI*2); ctx.fill();
 }
 
 function drawPowerup(pu) {
