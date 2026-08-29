@@ -46,6 +46,14 @@
     font:bold 22px 'Segoe UI', Arial; cursor:pointer; }
   .pinKey:active { background:#555c6a; }
   #pinMsg { color:#ff8080; font:14px 'Segoe UI', Arial; height:18px; margin-top:8px; }
+  #pinActions { display:none; flex-direction:column; gap:10px; width:230px; }
+  #pinActions.open { display:flex; }
+  #pinGrid.hidden { display:none; }
+  .pinActBtn { padding:14px 10px; border-radius:10px; border:none; background:#3a3f4a; color:#fff;
+    font:bold 15px 'Segoe UI', Arial; cursor:pointer; }
+  .pinActBtn:active { background:#555c6a; }
+  #pinActReset { background:#5a2a2a; }
+  #pinActReset:active { background:#7a3a3a; }
 </style>
 </head>
 <body>
@@ -75,6 +83,11 @@
       <button class="pinKey" data-k="OK">✓</button>
     </div>
     <div id="pinMsg"></div>
+    <div id="pinActions">
+      <button id="pinActGod" class="pinActBtn">🛡️ Activează god mode (joc normal)</button>
+      <button id="pinActFinal" class="pinActBtn">🏁 Sari la boss final (god mode)</button>
+      <button id="pinActReset" class="pinActBtn">🗑️ Resetează recordul</button>
+    </div>
   </div>
 </div>
 
@@ -407,9 +420,16 @@ const pinMsg = document.getElementById('pinMsg');
 function pinRender() {
   pinDisplay.textContent = pinEntered.padEnd(4, '•').split('').join(' ');
 }
+const pinGridEl = document.getElementById('pinGrid');
+const pinActionsEl = document.getElementById('pinActions');
+function pinShowGrid() {
+  pinGridEl.classList.remove('hidden');
+  pinActionsEl.classList.remove('open');
+  pinEntered = ''; pinMsg.textContent = ''; pinRender();
+}
 document.getElementById('btnPIN').addEventListener('pointerdown', e => {
   e.preventDefault(); e.stopPropagation();
-  pinEntered = ''; pinMsg.textContent = ''; pinRender();
+  pinShowGrid();
   pinModal.classList.add('open');
 });
 pinModal.addEventListener('pointerdown', e => {
@@ -422,20 +442,43 @@ document.getElementById('pinGrid').addEventListener('pointerdown', e => {
   const k = btn.dataset.k;
   if (k === 'C') { pinEntered = ''; pinMsg.textContent = ''; }
   else if (k === 'OK') {
-    if (pinEntered === PIN_CODE) {
-      pinModal.classList.remove('open');
-      activateTestGodMode();
-    } else {
-      pinMsg.textContent = 'Cod greșit';
-    }
+    if (pinEntered === PIN_CODE) unlockPinActions();
+    else pinMsg.textContent = 'Cod greșit';
   } else if (pinEntered.length < 4) {
     pinEntered += k;
     if (pinEntered.length === 4) {
-      if (pinEntered === PIN_CODE) { pinModal.classList.remove('open'); activateTestGodMode(); }
+      if (pinEntered === PIN_CODE) unlockPinActions();
       else pinMsg.textContent = 'Cod greșit';
     }
   }
   pinRender();
+});
+const pinActGodEl = document.getElementById('pinActGod');
+function pinActGodLabel() {
+  pinActGodEl.textContent = godMode ? '🛡️ Dezactivează god mode' : '🛡️ Activează god mode (joc normal)';
+}
+function unlockPinActions() {
+  pinGridEl.classList.add('hidden');
+  pinActionsEl.classList.add('open');
+  pinMsg.textContent = '';
+  pinActGodLabel();
+}
+pinActGodEl.addEventListener('pointerdown', e => {
+  e.preventDefault(); e.stopPropagation();
+  godMode = !godMode;
+  pinModal.classList.remove('open');
+});
+document.getElementById('pinActFinal').addEventListener('pointerdown', e => {
+  e.preventDefault(); e.stopPropagation();
+  pinModal.classList.remove('open');
+  activateTestGodMode();
+});
+document.getElementById('pinActReset').addEventListener('pointerdown', e => {
+  e.preventDefault(); e.stopPropagation();
+  resetRecords();
+  pinMsg.textContent = 'Recordul a fost resetat ✓';
+  pinMsg.style.color = '#8fff8f';
+  setTimeout(() => { pinMsg.style.color = ''; pinModal.classList.remove('open'); pinShowGrid(); }, 1200);
 });
 function activateTestGodMode() {
   godMode = true;
@@ -446,6 +489,9 @@ function activateTestGodMode() {
   if (boss) boss.dead = true;
   state = 'bossdead'; stateTimer = 0;
   stopMusic(); sfx.win();
+}
+function resetRecords() {
+  try { localStorage.removeItem('sa_records'); } catch(e){}
 }
 
 /* ================= RECORDURI ================= */
@@ -1222,7 +1268,10 @@ function shootFireball() {
 }
 
 function hurtPlayer(fatal) {
-  if (godMode) return;
+  if (godMode) {
+    if (fatal) spawnPlayer(levelSpawn.x, levelSpawn.y);   // căderea nu te omoară, dar nici nu cazi la nesfârșit
+    return;
+  }
   const p = player;
   if (!fatal && p.fire) {
     // pierzi întâi puterea de foc, rămâi mare
@@ -2413,6 +2462,13 @@ function drawHUD() {
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   ctx.fillText('⭐ ' + score, 28, 39);
   ctx.fillText('❤️'.repeat(Math.max(0, lives)), 160, 39);
+  if (godMode) {
+    ctx.fillStyle = '#8fe0ff';
+    ctx.font = 'bold 16px "Segoe UI", Arial';
+    ctx.fillText('🛡️ GOD MODE', 28, 78);
+    ctx.font = 'bold 24px "Segoe UI", Arial';
+    ctx.fillStyle = '#fff';
+  }
   ctx.textAlign = 'center';
   ctx.fillText(LEVELS[Math.min(levelIdx, LEVELS.length-1)].name, W/2 + 20, 39);
   ctx.textAlign = 'right';
