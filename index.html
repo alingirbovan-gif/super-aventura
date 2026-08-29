@@ -31,6 +31,21 @@
     justify-content:center; user-select:none; -webkit-user-select:none; z-index:11; cursor:pointer; }
   #btnM { right:2vw; }
   #btnFS { right:calc(2vw + 54px); }
+  #btnPIN { position:fixed; top:2vh; left:2vw; width:44px; height:44px; border-radius:50%;
+    background:rgba(0,0,0,.35); color:#fff; font-size:20px; display:flex; align-items:center;
+    justify-content:center; user-select:none; -webkit-user-select:none; z-index:11; cursor:pointer; }
+  #pinModal { position:fixed; inset:0; background:rgba(0,0,0,.65); z-index:20; display:none;
+    align-items:center; justify-content:center; }
+  #pinModal.open { display:flex; }
+  #pinBox { background:#22262e; border-radius:16px; padding:22px 26px; text-align:center;
+    box-shadow:0 10px 40px rgba(0,0,0,.5); }
+  #pinDisplay { color:#fff; font:bold 28px 'Segoe UI', Arial; letter-spacing:10px; margin-bottom:14px;
+    min-height:34px; }
+  #pinGrid { display:grid; grid-template-columns:repeat(3, 56px); gap:10px; }
+  .pinKey { width:56px; height:56px; border-radius:12px; border:none; background:#3a3f4a; color:#fff;
+    font:bold 22px 'Segoe UI', Arial; cursor:pointer; }
+  .pinKey:active { background:#555c6a; }
+  #pinMsg { color:#ff8080; font:14px 'Segoe UI', Arial; height:18px; margin-top:8px; }
 </style>
 </head>
 <body>
@@ -41,6 +56,27 @@
 <div class="tbtn" id="btnF">🔥</div>
 <div id="btnM">🔊</div>
 <div id="btnFS">⛶</div>
+<div id="btnPIN" title="testare">🔢</div>
+<div id="pinModal">
+  <div id="pinBox">
+    <div id="pinDisplay"></div>
+    <div id="pinGrid">
+      <button class="pinKey" data-k="1">1</button>
+      <button class="pinKey" data-k="2">2</button>
+      <button class="pinKey" data-k="3">3</button>
+      <button class="pinKey" data-k="4">4</button>
+      <button class="pinKey" data-k="5">5</button>
+      <button class="pinKey" data-k="6">6</button>
+      <button class="pinKey" data-k="7">7</button>
+      <button class="pinKey" data-k="8">8</button>
+      <button class="pinKey" data-k="9">9</button>
+      <button class="pinKey" data-k="C">✖</button>
+      <button class="pinKey" data-k="0">0</button>
+      <button class="pinKey" data-k="OK">✓</button>
+    </div>
+    <div id="pinMsg"></div>
+  </div>
+</div>
 
 <script>
 'use strict';
@@ -98,7 +134,8 @@ const ROWS = 12;
 /* ================= NIVELURI =================
    # pământ  B cărămidă (se sparge)  Q bloc ?  = platformă
    W cărămidă cu aripi 🪽  S cărămidă cu stea ⭐  H cărămidă cu inimă ❤️
-   C monedă  E inamic  P start  F steag  X boss  . gol
+   Z cărămidă easter-egg 🎁  R cărămidă cu rampă secretă 🪜
+   C monedă  E inamic  L liliac (zboară)  P start  F steag  X boss  K checkpoint  . gol
 */
 const LEVELS = [
 { name:'Câmpia Veselă 🌻', theme:'campie', map:[
@@ -109,8 +146,8 @@ const LEVELS = [
 '',
 '',
 '..............................=====..........Q..........................................C.C.............................................=====..........Q..........................................C.C...............',
-'..........BQB...........................................BWB............................=====........................BQB...........................................BWB............................=====..............',
-'....BWB.............................BI....................................C.C.................................BWB.............................BI....................................C.C.........................F...',
+'..........BQB...........................................BWB...........R................=====........................BQB...........................................BWB............................=====..............',
+'....BWB.............................BI.................Z..................C.C.................................BWB.............................BI....................................C.C.........................F...',
 '..............................................====......................=====...........................................................................====......................=====............................',
 '..P................E..........E..........................E.........E................E.............K..........................E..........E..........................E.........E................E....................',
 '######################...##########################...###########################...############################################...##########################...###########################...######################',
@@ -123,20 +160,20 @@ const LEVELS = [
 '',
 '',
 '......................................====................................................C.C.C.................................................====................................................C.C.C...........',
-'............Q............................................W..BSB..........................======.......................Q............................................W..BSB..........................======...........',
+'............Q...............I..............................W..BSB..........................======.......................Q............................................W..BSB..........................======...........',
 '.......WI..............BQB...............................................C.C.....................................WI..............BQB...............................................C.C..............................',
 '.................................====....................................====..............................................................====....................................====.............................',
-'..P..........E...........E..............E.........E...........E......E.......E....................K....................E...........E..............E.........E...........E......E.......E.................F..........',
+'..P..........E...........E..............E.........E...........E......E.......E....................K....................E...........E..............E.........E...........E......E.......E.....E.....E.....F..........',
 '##################...############################...#########################...############################################...############################...#########################...##########################',
 ]},
 { name:'Subteranul 🕳️', theme:'subteran', miniboss:{ kind:'kong', title:'Konkey Kong', hp:8 }, map:[
 '####################################################################################################################################################################################################################',
 '',
-'......................................##........................................................................................................##..................................................................',
-'............BBBB......................................BBBB............................................................BBBB......................................BBBB................................................',
+'......................................##........................................................................................................##........................................L.............L...........',
+'............BBBB......................................BBBB............................................................BBBB......................................BBBB.............................L..................',
 '............====......................................====............................................................====......................................====...............................................',
 '.......................................C.C.C....===......................................C.C.C...................................................C.C.C....===......................................C.C.C...........',
-'.................BHB..................=======...................BB.......................======............................BHB..................=======...................BB.......................======...........',
+'.................BHB..................=======...................BB..............Z........======............................BHB..................=======...................BB.......................======...........',
 '.....BI..........................BWR.........................BQB...............................................BI..........................BWR.........................BQB..........................................',
 '',
 '..........====.....................................................................====.............................====.....................................................................====...................',
@@ -149,12 +186,12 @@ const LEVELS = [
 '..............C.C.C...........................................C.C.C.....................................................C.C.C...........................................C.C.C.......................................',
 '..............=====...........................................=====.....................................................=====...........................................=====.......................................',
 '',
-'.........................................Q.........................................................................................................Q................................................................',
+'....................................................................................................................................................................................................................',
 '...........................====.....................====.................====........................................................====.....................====.................====............................',
 '....BWB.......................................................................................................BWB...................................................................................................',
-'........................BI..............................BSB..........................BB...........................................BI..............................BSB..........................BB...................',
+'...............I........BI...............Q..............BSB...........R..............BB...........................................BI...............Q..............BSB..........................BB...................',
 '',
-'..P..........E...........E.........E.........E...........E....E.....E.........E...................K....................E...........E.........E.........E...........E....E.....E.........E...............F..........',
+'..P..........E...........E.........E.........E...........E....E.....E.........E...................K....................E...........E.........E.........E...........E....E.....E.........E.E......E......F..........',
 '################...#############################...##########################...##########################################...#############################...##########################...##########################',
 ]},
 { name:'Lacul Albastru 🐟', theme:'apa', map:[
@@ -222,9 +259,9 @@ const LEVELS = [
 '',
 '..........................====..........Q.....====.......................................C.C.C......................................====..........Q.....====.......................................C.C.C...........',
 '.......BWB..........................................................BQSB..................======.................BWB..........................................................BQSB..................======..........',
-'....................BI...............................BB..................C.C..................................................BI...............................BB..................C.C..............................',
+'....................BI...............................BB.....Z............C.C..................................................BI...............................BB..................C.C..............................',
 '..............................====......................................====............................................................====......................................====.............................',
-'..P.......E........E.........E.........E....E.........E..........E............E......E............K.................E........E.........E.........E....E.........E..........E............E......E.......F..X.......',
+'..P.......E........E.........E.........E....E.........E..........E............E......E............K.................E........E.........E.........E....E.........E..........E............E...E..E...E...F..X.......',
 '##############...####################...######################...#####################..################################...####################...######################...#####################..##################',
 ]},
 { name:'Castelul Bossului 🐉', theme:'boss', map:[
@@ -360,6 +397,57 @@ addEventListener('fullscreenchange', () => {
   btnFSEl.textContent = document.fullscreenElement ? '🡴' : '⛶';
 });
 
+/* ================= PIN testare (god mode → sare la final) ================= */
+let godMode = false;
+const PIN_CODE = '1720';
+let pinEntered = '';
+const pinModal = document.getElementById('pinModal');
+const pinDisplay = document.getElementById('pinDisplay');
+const pinMsg = document.getElementById('pinMsg');
+function pinRender() {
+  pinDisplay.textContent = pinEntered.padEnd(4, '•').split('').join(' ');
+}
+document.getElementById('btnPIN').addEventListener('pointerdown', e => {
+  e.preventDefault(); e.stopPropagation();
+  pinEntered = ''; pinMsg.textContent = ''; pinRender();
+  pinModal.classList.add('open');
+});
+pinModal.addEventListener('pointerdown', e => {
+  if (e.target === pinModal) pinModal.classList.remove('open');   // click în afara casetei = închide
+});
+document.getElementById('pinGrid').addEventListener('pointerdown', e => {
+  e.preventDefault(); e.stopPropagation();
+  const btn = e.target.closest('.pinKey');
+  if (!btn) return;
+  const k = btn.dataset.k;
+  if (k === 'C') { pinEntered = ''; pinMsg.textContent = ''; }
+  else if (k === 'OK') {
+    if (pinEntered === PIN_CODE) {
+      pinModal.classList.remove('open');
+      activateTestGodMode();
+    } else {
+      pinMsg.textContent = 'Cod greșit';
+    }
+  } else if (pinEntered.length < 4) {
+    pinEntered += k;
+    if (pinEntered.length === 4) {
+      if (pinEntered === PIN_CODE) { pinModal.classList.remove('open'); activateTestGodMode(); }
+      else pinMsg.textContent = 'Cod greșit';
+    }
+  }
+  pinRender();
+});
+function activateTestGodMode() {
+  godMode = true;
+  if (charIdx !== 0 && charIdx !== 1) charIdx = 0;
+  lives = LIVES_START;
+  levelIdx = LEVELS.length - 1;
+  loadLevel(levelIdx);
+  if (boss) boss.dead = true;
+  state = 'bossdead'; stateTimer = 0;
+  stopMusic(); sfx.win();
+}
+
 /* ================= RECORDURI ================= */
 function loadRecords() {
   try { return JSON.parse(localStorage.getItem('sa_records')) || {}; } catch(e){ return {}; }
@@ -403,6 +491,8 @@ let fireballs = [];
 let fireCd = 0;
 let glasses = [];      // ochelarii aruncați de Deni spre boss 👓
 let checkpoints = [];   // puncte de salvare pe parcursul nivelului 🚩
+let bubbles = [];        // bulițe în urma jucătorului cât înoată 🫧
+let bubbleCd = 0;
 let fwT = 0;               // temporizator artificii 🎆
 let rampSteps = [];        // trepte de rampă care „coboară" pe rând
 
@@ -487,6 +577,7 @@ function chooseHelper(i) {
   helper = { cfg, x: player.x - 80, y: player.y - 40, w: 34, h: Math.round(64 * cfg.scale * 0.8) + 10,
     vx: 0, vy: 0, onGround: false, dir: 1, anim: 0, cool: 1, punchT: 0 };
   state = 'play';
+  if (theme !== 'boss') startMusic('boss');   // muzică de suspans cât ține lupta cu mini-boss-ul
   sfx.power();
 }
 
@@ -497,7 +588,7 @@ function loadLevel(idx, keepCheckpoint) {
   levelW = Math.max(...rows.map(r => r.length));
   grid = [];
   enemies = []; coins = []; powerups = []; particles = []; flyCoins = [];
-  fireballs = []; glasses = []; rampSteps = []; checkpoints = [];
+  fireballs = []; glasses = []; rampSteps = []; checkpoints = []; bubbles = [];
   boss = null; helper = null; flagX = 0;
   for (let r = 0; r < ROWS; r++) {
     grid[r] = [];
@@ -513,9 +604,11 @@ function loadLevel(idx, keepCheckpoint) {
       else if (ch === 'H') t = 8;
       else if (ch === 'I') t = 9;
       else if (ch === 'R') t = 10;    // cărămidă care coboară o rampă la spargere 🪜
+      else if (ch === 'Z') t = 11;    // cărămidă easter-egg 🎁
       else if (ch === 'K') { checkpoints.push({ x: c*TILE, y: r*TILE, taken: false }); }
       else if (ch === 'C') { coins.push({ c, r, taken:false, anim: Math.random()*6 }); }
       else if (ch === 'E') { enemies.push(makeEnemy(c*TILE, r*TILE)); }
+      else if (ch === 'L') { enemies.push(makeEnemy(c*TILE, r*TILE, 'bird')); }
       else if (ch === 'P') {
         if (!keepCheckpoint) levelSpawn = { x: c*TILE, y: r*TILE };
         spawnPlayer(levelSpawn.x, levelSpawn.y);
@@ -531,8 +624,8 @@ function loadLevel(idx, keepCheckpoint) {
   camX = Math.max(0, player.x - W/3);
   startMusic(theme);
 }
-function makeEnemy(x, y) {
-  const kind = theme === 'apa' ? 'fish' : theme === 'nori' ? 'bird' : 'walker';
+function makeEnemy(x, y, forceKind) {
+  const kind = forceKind || (theme === 'apa' ? 'fish' : theme === 'nori' ? 'bird' : 'walker');
   return { kind, x, y: y + TILE - 40, baseY: y + TILE - 40, w: 40, h: 40, vx: -ENEMY_SPD, vy: 0,
     onGround: false, dead: false, deadT: 0, anim: Math.random()*6 };
 }
@@ -575,7 +668,7 @@ function tileAt(px, py) {
   if (r >= ROWS) return 0;
   return grid[r][c];
 }
-function solidForBody(t) { return t === 1 || t === 2 || t === 3 || t === 5 || t === 6 || t === 7 || t === 8 || t === 9 || t === 10; }
+function solidForBody(t) { return t === 1 || t === 2 || t === 3 || t === 5 || t === 6 || t === 7 || t === 8 || t === 9 || t === 10 || t === 11; }
 function solidTop(t)     { return solidForBody(t) || t === 4; }
 
 /* ================= FIZICĂ ================= */
@@ -666,6 +759,15 @@ function hitBlockAbove(r, b) {
       sfx.power();
       return;
     }
+    if (t === 11) {                        // easter egg ascuns! 🎁
+      grid[r][c] = 5;
+      score += 50;
+      sfx.power(); sfx.heart();
+      for (let i=0;i<10;i++) particles.push({ x:c*TILE+TILE/2, y:r*TILE+TILE/2, vx:(Math.random()-0.5)*350,
+        vy:-150-Math.random()*250, t:0.7, col: ['#ffd700','#ff8fb5','#7fd4ff'][i%3] });
+      state = 'easteregg'; stateTimer = 0;
+      return;
+    }
   }
 }
 
@@ -730,6 +832,14 @@ function update(dt) {
   if (p.wingsT > 0) p.wingsT -= dt;
   if (p.starT > 0) p.starT -= dt;
   if (p.flap > 0) p.flap -= dt;
+
+  if (swimming) {                        // bulițe din mască cât înoată 🫧
+    bubbleCd -= dt;
+    if (bubbleCd <= 0) {
+      bubbleCd = 0.3 + Math.random()*0.25;
+      bubbles.push({ x: p.x + p.w/2 - p.dir*8, y: p.y + p.h*0.3, vx:(Math.random()-0.5)*20, vy:-40-Math.random()*30, t: 1.4, r: 2.5+Math.random()*2.5 });
+    }
+  }
 
   if (p.y > H + 100) hurtPlayer(true);   // căderea în gol e mereu fatală
 
@@ -922,16 +1032,16 @@ function bossDamage(dmg) {
     for (let i=0;i<40;i++) particles.push({ x:boss.x+boss.w/2, y:boss.y+boss.h/2, vx:(Math.random()-0.5)*600, vy:-Math.random()*500, t:1.2,
       col:['#8a4aa0','#ffd700','#e63946','#2a9d8f'][i%4] });
     if (levelIdx === LEVELS.length - 1) {
-      // bossul final → victorie mare
+      // bossul final → victorie mare, finish-move mare
       state = 'bossdead'; stateTimer = 0;
       score += 500;
       stopMusic();
       sfx.win();
     } else {
-      // miniboss învins → sărbătorim și mergem mai departe spre steag 🎉
+      // miniboss învins → finish-move + sărbătorim
+      state = 'minibossdead'; stateTimer = 0;
       score += 300;
       sfx.win();
-      for (let i = 0; i < 3; i++) setTimeout(spawnFirework, i * 250);
     }
   }
 }
@@ -950,22 +1060,42 @@ function updateHelper(dt) {
   if (h.punchT > 0) h.punchT -= dt;
   const fightMode = b && !b.dead && Math.abs((b.x + b.w/2) - (player.x + player.w/2)) < 750;
   const meleeRange = h.cfg.attack === 'punch';
-  const engageEnemy = !fightMode ? nearestLiveEnemy(h) : null;   // în afara luptei cu boss-ul, ajută și la inamicii obișnuiți
+  const nearEnemy = nearestLiveEnemy(h);
+  // în luptă cu boss-ul rămâne concentrat pe el, dar dacă un inamic (ex: liliac) trece chiar pe lângă el, îl curăță
+  const engageRange = meleeRange ? 90 : 180;
+  const engageEnemy = !fightMode ? nearEnemy
+    : (nearEnemy && Math.abs((nearEnemy.x+nearEnemy.w/2)-(h.x+h.w/2)) < engageRange ? nearEnemy : null);
 
   let tx;
-  if (fightMode) {
-    tx = b.x + b.w/2 - h.w/2 - (meleeRange ? 0 : Math.sign((b.x+b.w/2)-(h.x+h.w/2) || 1) * 90);
-  } else if (engageEnemy) {
+  if (engageEnemy) {
     const ex = engageEnemy.x + engageEnemy.w/2;
     tx = ex - h.w/2 - (meleeRange ? 0 : Math.sign(ex-(h.x+h.w/2) || 1) * 90);
+  } else if (fightMode) {
+    tx = b.x + b.w/2 - h.w/2 - (meleeRange ? 0 : Math.sign((b.x+b.w/2)-(h.x+h.w/2) || 1) * 90);
   } else {
-    tx = player.x - 70;   // Deni ține distanța ca să arunce; în rest te urmărește prin nivel
+    tx = player.x - 45;   // rămâne aproape de jucător, îl urmărește îndeaproape
   }
   const dx = tx - h.x;
-  if (Math.abs(dx) > 30) { h.vx += Math.sign(dx) * 2000 * dt; h.dir = Math.sign(dx) || 1; }
+  if (Math.abs(dx) > 20) { h.vx += Math.sign(dx) * 2000 * dt; h.dir = Math.sign(dx) || 1; }
   else { h.vx *= 0.85; }
   h.vx = Math.max(-300, Math.min(300, h.vx));
-  if (fightMode) {
+  if (engageEnemy) {                                    // ajutorul curăță inamicii din cale (inclusiv lângă boss) 💪
+    const edx = (engageEnemy.x + engageEnemy.w/2) - (h.x + h.w/2);
+    const edist = Math.abs(edx);
+    h.dir = Math.sign(edx) || h.dir;
+    if (meleeRange) {
+      if (edist < 70 && h.cool <= 0) {
+        h.punchT = 0.5; h.cool = 1.3;
+        engageEnemy.dead = true; engageEnemy.deadT = 0.4;
+        score += 25; sfx.stomp();
+        for (let i=0;i<5;i++) particles.push({ x:engageEnemy.x+engageEnemy.w/2, y:engageEnemy.y+engageEnemy.h/2, vx:(Math.random()-0.5)*250, vy:-Math.random()*200, t:0.4, col:'#a05a2c' });
+      }
+    } else if (edist < 280 && edist > 30 && h.cool <= 0) {
+      h.punchT = 0.4; h.cool = 1.6;
+      glasses.push({ x: h.x + h.w/2 + h.dir*10, y: h.y + h.h*0.32, vx: h.dir*520, vy: -80, t: 1.4, spin: 0 });
+      beep(700, 0.09, 'square', 0.1, -200);
+    }
+  } else if (fightMode) {
     const bdx = b.x + b.w/2 - (h.x + h.w/2);
     const dist = Math.abs(bdx);
     if (!h.onGround) h.vx += Math.sign(bdx) * 1100 * dt;
@@ -973,13 +1103,13 @@ function updateHelper(dt) {
     let attacked = false;
     if (meleeRange) {                                  // Alin: pumn corp la corp 👊
       if (dist < 74 && h.cool <= 0 && b.invT <= 0) {
-        h.punchT = 0.28; h.cool = 0.9; attacked = true;
+        h.punchT = 0.5; h.cool = 1.1; attacked = true;
         bossDamage(b.kind === 'balaur' ? 1 : 0.5);      // Balaurul: 50% din damage-ul jucătorului; mini-boși: 25%
         sfx.stomp();
         for (let i=0;i<5;i++) particles.push({ x:b.x+b.w/2-bdx*0.3, y:b.y+b.h*0.4, vx:h.dir*250+(Math.random()-0.5)*120, vy:-Math.random()*180, t:0.3, col:'#eec096' });
       }
     } else if (dist < 340 && h.cool <= 0 && b.invT <= 0) {   // Deni: aruncă ochelarii de la distanță 👓
-      h.punchT = 0.22; h.cool = 1.5; attacked = true;
+      h.punchT = 0.4; h.cool = 1.7; attacked = true;
       glasses.push({ x: h.x + h.w/2 + h.dir*10, y: h.y + h.h*0.32, vx: h.dir*520, vy: -80, t: 1.4, spin: 0 });
       beep(700, 0.09, 'square', 0.1, -200);
     }
@@ -987,22 +1117,6 @@ function updateHelper(dt) {
         Math.sign(b.vx) !== Math.sign(bdx)) {   // sare când bossul vine spre el, ca să evite lovitura
       h.vy = -JUMP_V * 0.95;
       h.cool = 1.4;
-    }
-  } else if (engageEnemy) {                             // ajutorul curăță inamicii obișnuiți din cale 💪
-    const edx = (engageEnemy.x + engageEnemy.w/2) - (h.x + h.w/2);
-    const edist = Math.abs(edx);
-    h.dir = Math.sign(edx) || h.dir;
-    if (meleeRange) {
-      if (edist < 70 && h.cool <= 0) {
-        h.punchT = 0.28; h.cool = 0.7;
-        engageEnemy.dead = true; engageEnemy.deadT = 0.4;
-        score += 25; sfx.stomp();
-        for (let i=0;i<5;i++) particles.push({ x:engageEnemy.x+engageEnemy.w/2, y:engageEnemy.y+engageEnemy.h/2, vx:(Math.random()-0.5)*250, vy:-Math.random()*200, t:0.4, col:'#a05a2c' });
-      }
-    } else if (edist < 280 && edist > 30 && h.cool <= 0) {
-      h.punchT = 0.22; h.cool = 1.1;
-      glasses.push({ x: h.x + h.w/2 + h.dir*10, y: h.y + h.h*0.32, vx: h.dir*520, vy: -80, t: 1.4, spin: 0 });
-      beep(700, 0.09, 'square', 0.1, -200);
     }
   }
   if (!fightMode) {
@@ -1014,7 +1128,7 @@ function updateHelper(dt) {
   }
   moveBody(h, dt, false);
   h.vx = Math.max(-300, Math.min(300, h.vx));
-  if (h.y > H + 150) { h.x = player.x - 70; h.y = player.y - 60; h.vy = 0; }   // plasă de siguranță
+  if (h.y > H + 150) { h.x = player.x - 45; h.y = player.y - 60; h.vy = 0; }   // plasă de siguranță
   if (Math.abs(h.vx) > 20 && h.onGround) h.anim += dt * 11; else if (h.onGround) h.anim = 0;
 }
 
@@ -1035,13 +1149,15 @@ function updateFX(dt) {
   rampSteps = rampSteps.filter(st => !st.done);
 
   // artificii la final de nivel 🎆
-  if (state === 'levelend' || state === 'bossdead') {
+  if (state === 'levelend' || state === 'bossdead' || state === 'minibossdead') {
     fwT -= dt;
     if (fwT <= 0) { fwT = 0.38; spawnFirework(); }
   }
 
   for (const pt of particles) { pt.t -= dt; pt.x += pt.vx*dt; pt.y += pt.vy*dt; pt.vy += 800*dt; }
   particles = particles.filter(pt => pt.t > 0);
+  for (const bu of bubbles) { bu.t -= dt; bu.x += bu.vx*dt; bu.y += bu.vy*dt; bu.vy *= 0.985; }
+  bubbles = bubbles.filter(bu => bu.t > 0);
   for (const fc of flyCoins) {
     fc.t += dt;
     if (fc.t >= fc.dur && !fc.popped) {
@@ -1059,14 +1175,18 @@ function updateFX(dt) {
       loadLevel(levelIdx);
       state = (LEVELS[levelIdx].theme === 'boss' || LEVELS[levelIdx].miniboss) ? 'helper' : 'play';
       if (LEVELS[levelIdx].theme === 'boss') stopMusic();
+      else if (LEVELS[levelIdx].miniboss) startMusic('boss');   // muzică de suspans la mini-boși
     }
   }
-  if (state === 'bossdead' && stateTimer > 2.5) { state = 'win'; stateTimer = 0; }
+  if (state === 'bossdead' && stateTimer > 20) { state = 'win'; stateTimer = 0; }
+  if (state === 'minibossdead' && stateTimer > 10) { state = 'play'; startMusic(theme); }
+  if (state === 'easteregg' && stateTimer > 3.5) { state = 'play'; }
   if (state === 'dead' && stateTimer > 1.5) {
     if (lives <= 0) { lives = LIVES_START; }
     if (boss && !boss.dead) {
-      // orice boss rămâne rănit — doar jucătorul reapare la start
+      // orice boss rămâne rănit — doar jucătorul reapare la start, ajutorul e transferat lângă el
       spawnPlayer(levelSpawn.x, levelSpawn.y);
+      if (helper) { helper.x = player.x - 80; helper.y = player.y - 40; helper.vx = 0; helper.vy = 0; }
       state = 'play';
     } else {
       loadLevel(levelIdx, true);   // reia de la ultimul checkpoint, nu de la începutul nivelului
@@ -1102,6 +1222,7 @@ function shootFireball() {
 }
 
 function hurtPlayer(fatal) {
+  if (godMode) return;
   const p = player;
   if (!fatal && p.fire) {
     // pierzi întâi puterea de foc, rămâi mare
@@ -1159,6 +1280,12 @@ function draw() {
     const y = fc.y + (ty - fc.y) * e - Math.sin(frac * Math.PI) * 40;   // arc ușor spre scor ⭐
     drawCoin(x, y, time*10, 1 - frac*0.6);
   }
+  for (const bu of bubbles) {
+    ctx.globalAlpha = Math.max(0, Math.min(1, bu.t*1.5));
+    ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 1.3;
+    ctx.beginPath(); ctx.arc(bu.x, bu.y, bu.r, 0, Math.PI*2); ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
   for (const pu of powerups) drawPowerup(pu);
   for (const fb of fireballs) {
     ctx.fillStyle = '#ff9f1c';
@@ -1168,7 +1295,9 @@ function draw() {
   }
   for (const gl of glasses) drawThrownGlasses(gl);
   for (const en of enemies) drawEnemy(en);
-  if (boss) drawBoss();
+  if (state === 'minibossdead') drawFinishMove(10);
+  else if (state === 'bossdead') drawFinishMove(20);
+  else if (boss) drawBoss();
   if (helper) drawKidOnFoot(helper.x + helper.w/2, helper.y + helper.h, helper.cfg, helper.h, helper.dir, helper.anim, !helper.onGround, helper.punchT > 0);
 
   if (state !== 'dead') {
@@ -1180,6 +1309,7 @@ function draw() {
       }
       drawKid(p.x + p.w/2, p.y + p.h, CHARACTERS[charIdx], p.h, p.dir, p.anim, !p.onGround, wings);
       ctx.filter = 'none';
+      if (theme === 'apa') drawDiveMask(p.x + p.w/2, p.y + p.h*0.16, p.dir, p.h/58);
       if (p.starT > 0) drawStarAura(p);
       if (p.fire) {        // flacăra puterii de foc
         const fl = 5 + Math.sin(time*18) * 2.5;
@@ -1202,12 +1332,14 @@ function draw() {
   ctx.restore();
 
   drawHUD();
-  if (boss || (state === 'helper')) drawBossBar();
+  if ((boss && state !== 'minibossdead' && state !== 'bossdead') || state === 'helper') drawBossBar();
 
   if (state === 'helper') drawHelperSelect();
   if (state === 'dead') drawOverlay(lives > 0 ? 'Ups! 😅 Mai încearcă!' : 'Nu-i nimic! 💪 O luăm de la capăt!', '');
   if (state === 'levelend') drawOverlay('Bravo, ' + CHARACTERS[charIdx].name + '! 🎉', levelIdx+1 < LEVELS.length ? 'Urmează: ' + LEVELS[levelIdx+1].name : 'Ai terminat totul!');
-  if (state === 'bossdead') drawOverlay('AȚI ÎNVINS BOSSUL! 🐉💥', 'Echipă de aur! ⭐');
+  if (state === 'minibossdead') drawOverlay('Ai învins pe ' + bossTitle() + '! 🎉', 'Echipă grozavă! ⭐');
+  if (state === 'bossdead') drawBossVictory();
+  if (state === 'easteregg') drawEasterEgg();
   if (state === 'win') drawWin();
 }
 
@@ -1289,7 +1421,7 @@ function drawTile(t, x, y) {
       ctx.fillStyle = '#8a5a30';
       ctx.fillRect(x+6, y+20, 8, 8); ctx.fillRect(x+28, y+32, 8, 8); ctx.fillRect(x+18, y+14, 6, 6);
     }
-  } else if (t === 2 || t === 6 || t === 7 || t === 8 || t === 9 || t === 10) {   // cărămizile cu secrete arată identic 😉
+  } else if (t === 2 || t === 6 || t === 7 || t === 8 || t === 9 || t === 10 || t === 11) {   // cărămizile cu secrete arată identic 😉
     ctx.fillStyle = '#c0562a'; ctx.fillRect(x, y, TILE, TILE);
     ctx.strokeStyle = '#7a3418'; ctx.lineWidth = 3;
     ctx.strokeRect(x+1.5, y+1.5, TILE-3, TILE-3);
@@ -1390,6 +1522,142 @@ function drawThrownGlasses(gl) {           // ochelarii aruncați de Deni 👓
   ctx.beginPath(); ctx.arc(-6, 0, 6, 0, Math.PI*2); ctx.stroke();
   ctx.beginPath(); ctx.arc(6, 0, 6, 0, Math.PI*2); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(-1, 0); ctx.lineTo(1, 0); ctx.stroke();
+  ctx.restore();
+}
+
+function drawRabbit(x, y, scale, happy) {
+  const bounce = Math.sin(time*6) * 6 * scale;
+  const earFlop = Math.sin(time*4) * 8;
+  ctx.save();
+  ctx.translate(x, y + bounce);
+  ctx.scale(scale, scale);
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.ellipse(-16, -50 + earFlop*0.2, 8, 26, -0.15, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(14, -50 - earFlop*0.2, 8, 26, 0.15, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#ffc2d6';
+  ctx.beginPath(); ctx.ellipse(-16, -50 + earFlop*0.2, 4, 18, -0.15, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(14, -50 - earFlop*0.2, 4, 18, 0.15, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.ellipse(0, 10, 32, 26, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(0, -22, 24, 22, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#222';
+  ctx.beginPath(); ctx.arc(-9, -24, 3.2, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(9, -24, 3.2, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#ff9fc0';
+  ctx.beginPath(); ctx.arc(0, -15, 3, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#c94'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, -15); ctx.quadraticCurveTo(-6, -8, -12, -10); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, -15); ctx.quadraticCurveTo(6, -8, 12, -10); ctx.stroke();
+  ctx.fillStyle = '#ffd8e6';
+  ctx.beginPath(); ctx.ellipse(-16, 4, 8, 12, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(16, 4, 8, 12, 0, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+function drawWashingMachine(x, y, scale, spinT, happy) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+  ctx.fillStyle = '#e2e6ea';
+  roundRect(-34, -60, 68, 60, 8); ctx.fill();
+  ctx.strokeStyle = '#aab2ba'; ctx.lineWidth = 2;
+  roundRect(-34, -60, 68, 60, 8); ctx.stroke();
+  ctx.fillStyle = '#c7ccd1';
+  ctx.fillRect(-34, -60, 68, 12);
+  ctx.fillStyle = '#3b82ff';
+  ctx.beginPath(); ctx.arc(-22, -54, 3, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#ff5252';
+  ctx.beginPath(); ctx.arc(-12, -54, 3, 0, Math.PI*2); ctx.fill();
+  // hublou
+  ctx.fillStyle = '#2a2f36';
+  ctx.beginPath(); ctx.arc(2, -24, 22, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#7fd4ff';
+  ctx.beginPath(); ctx.arc(2, -24, 18, 0, Math.PI*2); ctx.fill();
+  ctx.save();
+  ctx.beginPath(); ctx.arc(2, -24, 18, 0, Math.PI*2); ctx.clip();
+  ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 5;
+  const spin = (spinT || time) * 6;
+  for (let i = 0; i < 3; i++) {
+    ctx.beginPath();
+    ctx.ellipse(2, -24, 14, 6, spin + i * 2.1, 0, Math.PI*2);
+    ctx.stroke();
+  }
+  ctx.restore();
+  if (happy) {                                     // fața fericită a mașinii 😊
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(-4, -28, 3, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(8, -28, 3, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.arc(2, -20, 8, 0.15*Math.PI, 0.85*Math.PI); ctx.stroke();
+  }
+  ctx.fillStyle = '#c7ccd1';
+  ctx.fillRect(-30, -8, 12, 4);
+  ctx.fillRect(18, -8, 12, 4);
+  // baloane de săpun 🫧
+  for (let i = 0; i < 5; i++) {
+    const bt = ((time*0.7 + i*0.4) % 1.6);
+    const bx = 2 + Math.sin(time*2 + i) * 20;
+    const by = -46 - bt * 40;
+    ctx.globalAlpha = Math.max(0, 1 - bt/1.6);
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(bx, by, 3 + i%3, 0, Math.PI*2); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function drawEasterEgg() {
+  ctx.fillStyle = 'rgba(20,15,35,.55)';
+  ctx.fillRect(0, 0, W, H);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const antonia = charIdx === 0;
+  if (antonia) drawRabbit(W/2, H/2 - 10, 1.6);
+  else drawWashingMachine(W/2, H/2 - 10, 1.6);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 38px "Segoe UI", Arial';
+  ctx.fillText(antonia ? 'Felicitări! 🎉' : 'Felicitări, Marc! 🎉', W/2, H/2 + 110);
+  ctx.font = '26px "Segoe UI", Arial';
+  ctx.fillText(antonia ? 'Ai salvat un iepuraș! 🐰' : 'Ai găsit o mașină de spălat! 🧺', W/2, H/2 + 150);
+}
+
+function drawFinishMove(duration) {
+  const frac = Math.min(1, stateTimer / duration);
+  if (!boss) return;
+  const bx = boss.x + boss.w/2, by = boss.y + boss.h/2;
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, 1 - frac*1.4);
+  drawBoss();
+  ctx.restore();
+  if (charIdx === 0) {                              // Antonia: curcubeul unicornului lovește boss-ul 🌈
+    if (frac < 0.7 && player) {
+      const px = player.x + player.w/2, py = player.y + player.h*0.3;
+      const rainbow = ['#ff5252','#ffb347','#ffe066','#69f0ae','#4dd0e1','#b388ff'];
+      const arcH = 90 + Math.sin(time*10) * 8;
+      for (let i = 0; i < rainbow.length; i++) {
+        ctx.strokeStyle = rainbow[i]; ctx.lineWidth = 7; ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(px, py - i*5);
+        ctx.quadraticCurveTo((px+bx)/2, Math.min(py,by) - arcH - i*5, bx, by - i*5);
+        ctx.stroke();
+      }
+    }
+  } else {                                          // Marc: mașina de spălat înghite boss-ul 🧺
+    const wScale = Math.min(1.4, 0.3 + frac*2.2);
+    drawWashingMachine(bx, by + 30, wScale, time*(1+frac*3), frac > 0.5);
+  }
+}
+
+function drawDiveMask(cx, cy, dir, scale) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(dir * scale, scale);
+  ctx.strokeStyle = '#2a2f36'; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.moveTo(-9, 0); ctx.lineTo(9, -1); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,.55)';
+  ctx.strokeStyle = '#3a3f44'; ctx.lineWidth = 1.8;
+  ctx.beginPath(); ctx.ellipse(1, 0, 8, 6.4, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#3a3f44';
+  ctx.fillRect(6, -1.5, 3, 3);
   ctx.restore();
 }
 
@@ -1999,17 +2267,23 @@ function drawKidOnFoot(cx, footY, cfg, h, dir, anim, jumping, punching) {
   ctx.fillRect(bw/2 - 0.4*u, -10*u, aw, cfg.buff ? 1.6*u : 3*u);
   ctx.fillStyle = cfg.skin;
   if (cfg.buff) {
-    ctx.fillRect(bw/2 - 0.4*u, -8.5*u, aw, 2.6*u);                    // braț musculos
-    if (cfg.tattoo) {
-      ctx.fillStyle = 'rgba(70,58,78,.85)';                            // tatuaj
-      ctx.fillRect(bw/2 - 0.1*u, -8.2*u, 1.4*u, 1.3*u);
-      ctx.fillStyle = cfg.skin;
-    }
-    const punchExtend = punching ? 2.6*u : 0;                          // pumnul zboară înainte 👊
-    ctx.fillRect(bw/2 - 0.2*u, -6*u + armSwing*u*0.5, aw - 0.4*u + punchExtend, 1.5*u);
-    if (punching) {
+    if (punching) {                                                     // pumn drept, de la umăr 👊
+      const reach = 6*u;
+      ctx.fillRect(bw/2 - 0.4*u, -9.6*u, aw + reach, 2*u);
+      if (cfg.tattoo) {
+        ctx.fillStyle = 'rgba(70,58,78,.85)';
+        ctx.fillRect(bw/2 - 0.1*u, -9.3*u, 1.4*u, 1.3*u);
+      }
       ctx.fillStyle = '#fff';
-      ctx.beginPath(); ctx.arc(bw/2 - 0.2*u + aw - 0.4*u + punchExtend, -5.3*u, 0.7*u, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(bw/2 - 0.4*u + aw + reach, -8.6*u, 1*u, 0, Math.PI*2); ctx.fill();
+    } else {
+      ctx.fillRect(bw/2 - 0.4*u, -8.5*u, aw, 2.6*u);                    // braț musculos
+      if (cfg.tattoo) {
+        ctx.fillStyle = 'rgba(70,58,78,.85)';                            // tatuaj
+        ctx.fillRect(bw/2 - 0.1*u, -8.2*u, 1.4*u, 1.3*u);
+        ctx.fillStyle = cfg.skin;
+      }
+      ctx.fillRect(bw/2 - 0.2*u, -6*u + armSwing*u*0.5, aw - 0.4*u, 1.5*u);
     }
   } else {
     const throwLift = punching ? -3.4*u : armSwing*u*0.5;              // brațul se ridică să arunce 👓
@@ -2207,6 +2481,29 @@ function drawHelperSelect() {
   ctx.fillStyle = '#fff';
   ctx.font = '24px "Segoe UI", Arial';
   ctx.fillText('⬅➡ alege  •  Enter / atinge cardul', W/2, 530);
+}
+
+function drawBossVictory() {
+  ctx.fillStyle = 'rgba(0,0,0,.45)';
+  ctx.fillRect(0, 0, W, H);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  if (stateTimer < 4) {
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 46px "Segoe UI", Arial';
+    ctx.fillText('AȚI ÎNVINS BOSSUL FINAL! 🐉💥', W/2, H/2 - 20);
+    ctx.font = '30px "Segoe UI", Arial';
+    ctx.fillText('Echipă de aur! ⭐', W/2, H/2 + 40);
+  } else {
+    const antonia = charIdx === 0;
+    if (antonia) drawRabbit(W/2, H/2 - 70, 2.3);
+    else drawWashingMachine(W/2, H/2 - 70, 2.3, time*2, true);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 30px "Segoe UI", Arial';
+    ctx.fillText('Bravo, ' + CHARACTERS[charIdx].name + '!', W/2, H/2 + 150);
+    ctx.font = '23px "Segoe UI", Arial';
+    ctx.fillText('Ai reușit să ajungi la bossul final și să salvezi', W/2, H/2 + 186);
+    ctx.fillText(antonia ? 'un iepuraș uriaș! 🐰✨' : 'o mașină de spălat fericită! 🧺😊', W/2, H/2 + 216);
+  }
 }
 
 function drawWin() {
