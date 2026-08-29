@@ -11,7 +11,6 @@
   #wrap { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
   canvas { background:#5c94fc; image-rendering:pixelated; max-width:100%; max-height:100%;
     box-shadow:0 0 40px rgba(0,0,0,.6); border-radius:6px; }
-  /* Butoane touch */
   .tbtn { position:fixed; bottom:4vh; width:17vmin; height:17vmin; min-width:64px; min-height:64px;
     border-radius:50%; background:rgba(255,255,255,.18); border:3px solid rgba(255,255,255,.45);
     color:#fff; font-size:7vmin; display:none; align-items:center; justify-content:center;
@@ -20,7 +19,11 @@
   #btnL { left:4vw; }
   #btnR { left:calc(4vw + 19vmin); }
   #btnJ { right:4vw; background:rgba(255,80,80,.25); border-color:rgba(255,120,120,.6); }
+  #btnF { right:calc(4vw + 19vmin); background:rgba(255,160,40,.3); border-color:rgba(255,190,90,.7); }
   body.touch .tbtn { display:flex; }
+  #btnM { position:fixed; top:2vh; right:2vw; width:44px; height:44px; border-radius:50%;
+    background:rgba(0,0,0,.35); color:#fff; font-size:22px; display:flex; align-items:center;
+    justify-content:center; user-select:none; -webkit-user-select:none; z-index:11; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -28,45 +31,43 @@
 <div class="tbtn" id="btnL">◀</div>
 <div class="tbtn" id="btnR">▶</div>
 <div class="tbtn" id="btnJ">⬆</div>
+<div class="tbtn" id="btnF">🔥</div>
+<div id="btnM">🔊</div>
 
 <script>
 'use strict';
 
 /* ============================================================
-   PERSONAJE — aici le personalizezi după copiii tăi! 🎨
-   Poți schimba: numele, culorile (păr, piele, tricou, pantaloni),
-   hair: 'scurt' | 'ciufulit' | 'codite' | 'breton'
-   scale: mărimea personajului (1 = normal, 0.85 = mai mic)
+   PERSONAJE — jucători + ajutoare pentru boss 🎨
    ============================================================ */
 const CHARACTERS = [
   {
-    name: 'Antonia',
-    emoji: '🦄',
-    mount: 'unicorn',          // calare pe unicorn
-    hair: 'lung',
-    hairColor: '#f2d382',      // blond
-    skin: '#ffdcc0',
-    shirt: '#f8b8d0',          // roz Hello Kitty
-    pants: '#b9dcd2',          // colanti verzui-deschis
-    shoes: '#fff',
-    scale: 1.0,
+    name: 'Antonia', emoji: '🦄', mount: 'unicorn',
+    hair: 'lung', hairColor: '#f2d382', skin: '#ffdcc0',
+    shirt: '#f8b8d0', pants: '#b9dcd2', shoes: '#fff', scale: 1.0,
   },
   {
-    name: 'Marc',
-    emoji: '🚓',
-    mount: 'police',           // in masinuta de politie
-    hair: 'ciufulit',
-    hairColor: '#c9a97a',      // saten deschis
-    skin: '#ffe0c2',
-    glasses: true,             // ochelari rotunzi
-    shirt: '#f2ead8',          // tricou crem
-    pants: '#555a5e',
-    shoes: '#7cc3ea',
-    scale: 0.85,
+    name: 'Marc', emoji: '🚓', mount: 'police',
+    hair: 'ciufulit', hairColor: '#c9a97a', skin: '#ffe0c2', glasses: true,
+    shirt: '#f2ead8', pants: '#555a5e', shoes: '#7cc3ea', scale: 0.85,
+  },
+];
+const HELPERS = [
+  {
+    name: 'Alin', emoji: '👨',
+    hair: 'ridicat', hairColor: '#a8874f', skin: '#eec096',
+    beard: true, buff: true, tattoo: true,          // barbă, mușchi, tatuaj pe braț 💪
+    shirt: '#d6d6d0', pants: '#26262a', shoes: '#1a1a1e', scale: 1.3,
+  },
+  {
+    name: 'Deni', emoji: '👩',
+    hair: 'lung', hairColor: '#ecd292', hairRoots: '#6a5138',   // blond cu rădăcini șaten
+    skin: '#f2c49a', glasses: true,
+    shirt: '#26262e', pants: '#3a3a44', shoes: '#1a1a1e', scale: 1.2,
   },
 ];
 
-/* ================= CONSTANTE JOC ================= */
+/* ================= CONSTANTE ================= */
 const TILE = 48;
 const GRAV = 2300;
 const MOVE_ACC = 2400;
@@ -76,6 +77,10 @@ const JUMP_V = 860;
 const ENEMY_SPD = 70;
 const COYOTE = 0.12;
 const JUMP_BUFFER = 0.12;
+const LIVES_START = 5;
+const WINGS_TIME = 5;      // secunde de zbor de la ciuperca cu aripi
+const STAR_TIME = 7;       // secunde de invincibilitate
+const BOSS_HP = 16;
 
 const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
@@ -83,55 +88,152 @@ const W = cv.width, H = cv.height;
 const ROWS = 12;
 
 /* ================= NIVELURI =================
-   # = pământ   B = cărămidă   Q = bloc ?   = = platformă
-   C = monedă   E = inamic     P = start    F = steag
-   . = gol
+   # pământ  B cărămidă (se sparge)  Q bloc ?  = platformă
+   W cărămidă cu aripi 🪽  S cărămidă cu stea ⭐  H cărămidă cu inimă ❤️
+   C monedă  E inamic  P start  F steag  X boss  . gol
 */
 const LEVELS = [
-[ // ------- Nivelul 1: Câmpia Veselă -------
-'............................................................................................................',
-'............................................................................................................',
-'............................................................................................................',
-'..........................C.C.C............................................................................',
-'..........................BQB..............CCC..................BBQB.......................................',
-'...............................................................................C...........................',
-'.......................................====..........Q........................===..........................',
-'..........C.C..............................................................................................',
-'..........BQB.........E..........E................BB.....C.C.C.......E...E...........C.C..........F........',
-'..............................................=====......................................................',
-'..P.......................................................CCC.............................................',
-'##############################...#########################...####################...########################',
-],
-[ // ------- Nivelul 2: Munții Cărămizilor -------
-'............................................................................................................',
-'............................................................................................................',
-'.....................CCC....................................................................................',
-'.....................BBB..............C..............BQBQB.................................................',
-'....................................===....................................C.C.C..........................',
-'..............Q...........................E....................===........=====...........................',
-'..........................BB..........======..............................................................',
-'.........C........E......BBBB......................C..C...........E....E..................................',
-'........===..............BBBBB....................====....................................C........F......',
-'..................................................................BBB....................===..............',
-'..P...........E..........................CCC..................E...........................................',
-'################...##########################...############################...#############################',
-],
-[ // ------- Nivelul 3: Castelul Final -------
-'............................................................................................................',
-'............................................................................................................',
-'..............C.C.C........................................................................................',
-'..............=====...............BQB...........C...C...C..................................................',
-'.........................................................................BBBB..............................',
-'.......Q..................E.............................===.....===.......................................',
-'......................=======.............................................................................',
-'..........C.C..............................====......E....................................................',
-'..........BBB.........E...........C.................====......E................C.C.C...........F..........',
-'...............................=====......................................................................',
-'..P.................E.....................E................CCC.............E..............................',
-'##################...##############...##################...##############################...################',
-],
+{ name:'Câmpia Veselă 🌻', theme:'campie', map:[
+'',
+'',
+'..................C.C.C.C.......................................C.C.C.C...................................',
+'..................=========....................................=========..................................',
+'',
+'',
+'..............................=====..........Q..........................................C.C...............',
+'..........BQB...........................................BWB............................=====..............',
+'....BWB.............................BI....................................C.C.........................F....',
+'..............................................====......................=====............................',
+'..P................E..........E..........................E.........E................E....................',
+'######################...##########################...###########################...######################',
+]},
+{ name:'Pădurea Verde 🌳', theme:'campie', altMount: true, map:[   // aici: Anto pe role 🛼, Marc pe trotinetă 🛴
+'',
+'',
+'..........................C.C.C..........................................C.C.C.C..........................',
+'..........................=====.........................................=========.........................',
+'',
+'',
+'......................................====................................................C.C.C...........',
+'............Q.......................................W.......BSB..........................======............',
+'.......WI..............BQB...............................................C.C..............................',
+'.................................====....................................====.............................',
+'..P..........E...........E..............E.........E...........E..............E.................F..........',
+'##################...############################...#########################...##########################',
+]},
+{ name:'Subteranul 🕳️', theme:'subteran', map:[
+'##########################################################################################################',
+'',
+'......................................##..................................................................',
+'............BBBB......................................BBBB................................................',
+'............====......................................====...............................................',
+'.......................................C.C.C....===......................................C.C.C...........',
+'.................BHB..................=======...................BB.......................======............',
+'.....BI..........................BWR.........................BQB..........................................',
+'',
+'..........====.....................................................................====...................',
+'..P...........E.............E................................E................................F...........',
+'####################...###########################...########################...##########################',
+]},
+{ name:'Peștera Cristalelor 💎', theme:'subteran', map:[
+'##########################################################################################################',
+'',
+'..............C.C.C...........................................C.C.C.......................................',
+'..............=====...........................................=====.......................................',
+'',
+'.........................................Q................................................................',
+'...........................====.....................====.................====............................',
+'....BWB...................................................................................................',
+'........................BI..............................BSB..........................BB...................',
+'',
+'..P..........E...........E.........E.........E...........E..........E.........E...............F..........',
+'################...#############################...##########################...##########################',
+]},
+{ name:'Lacul Albastru 🐟', theme:'apa', map:[
+'',
+'',
+'...................C...............C...............C......................................................',
+'..............C.........C.....C.........C.....C.........C................................................',
+'....................................##....................................................................',
+'..........E..................E..................E.........E..............................................',
+'..................##......................##.......................##.....................................',
+'.......C.C..............C.C..............C.C..............C.C.............................................',
+'..............................................................................................F...........',
+'.........####...............E.####.................####..........E.......................................',
+'..P.......................................................................................................',
+'##########################################################################################################',
+]},
+{ name:'Marea Adâncă 🌊', theme:'apa', map:[
+'',
+'..........................................C.C.C..........................................................',
+'.....C.C........................................................................C.C......................',
+'...........E......................E....................E..................E...............................',
+'..............####........................####..............####.........................................',
+'',
+'.....E..............E.............E..............E...............E.......................................',
+'........##..............##..............##..............##...............................................',
+'...C.C.C.....C.C.C..........C.C.C...........C.C.C.............................F...........................',
+'',
+'..P.......................................................................................................',
+'##########################################################################################################',
+]},
+{ name:'Norii Pufoși ☁️', theme:'nori', map:[
+'',
+'',
+'',
+'...........C.C.C...................C.C.C....................C.C.C.........................................',
+'',
+'..........................E.......................E......................................E................',
+'..........I...........=====................=====....................=====................................',
+'',
+'.........C.C..................C.C....................C.C.....................C.C..............F..........',
+'.....#####..........#####..........#####..........#####..........#####..........#####.........####.......',
+'..P.......................................................................................................',
+'########........................................................................................##########',
+]},
+{ name:'Cerul Curcubeu 🌈', theme:'nori', map:[
+'',
+'',
+'........C.C.C.............C.C.C.............C.C.C.............C.C.C......................................',
+'',
+'.....=====.......=====.......=====.......=====.......=====................................................',
+'..............E......................E.......................E...........................................',
+'',
+'...........BSB...............................BWB.........................................................',
+'.......C.C.C........C.C.C.........C.C.C.........C.C.C.....................................F..............',
+'....####.......####.......####.........####.........####.........####...........####....####.............',
+'..P......................................................................................................',
+'######....................................................................................................',
+]},
+{ name:'Drumul spre Castel 🏰', theme:'campie', map:[
+'',
+'',
+'.................C.C.C.C..........................................C.C.C.C.................................',
+'.................=======..........................................=======.................................',
+'',
+'',
+'..........................====..........Q.....====.......................................C.C.C...........',
+'.......BWB..........................................................BQSB..................======...........',
+'....................BI...............................BB..................C.C..............................',
+'..............................====......................................====.............................',
+'..P.......E........E.........E.........E....E.........E..........E...........................F..........',
+'##############...####################...######################...#####################..##################',
+]},
+{ name:'Castelul Bossului 🐉', theme:'boss', map:[
+'##############################################',
+'#............................................#',
+'#............................................#',
+'#............................................#',
+'#............................................#',
+'#............................................#',
+'#.......BHB..................BHB.............#',
+'#............................................#',
+'#............................................#',
+'#............................................#',
+'#..P..................................X......#',
+'##############################################',
+]},
 ];
-const LEVEL_NAMES = ['Câmpia Veselă 🌻', 'Munții Cărămizilor 🧱', 'Castelul Final 🏰'];
 
 /* ================= SUNETE (WebAudio) ================= */
 let AC = null;
@@ -141,7 +243,7 @@ function beep(freq, dur, type='square', vol=0.15, slide=0) {
     const ac = audio();
     const o = ac.createOscillator(), g = ac.createGain();
     o.type = type; o.frequency.setValueAtTime(freq, ac.currentTime);
-    if (slide) o.frequency.linearRampToValueAtTime(freq + slide, ac.currentTime + dur);
+    if (slide) o.frequency.linearRampToValueAtTime(Math.max(30, freq + slide), ac.currentTime + dur);
     g.gain.setValueAtTime(vol, ac.currentTime);
     g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + dur);
     o.connect(g); g.connect(ac.destination);
@@ -149,33 +251,126 @@ function beep(freq, dur, type='square', vol=0.15, slide=0) {
   } catch(e){}
 }
 const sfx = {
-  jump()  { beep(300, 0.18, 'square', 0.12, 250); },
-  coin()  { beep(900, 0.08, 'square', 0.12); setTimeout(()=>beep(1200,0.15,'square',0.12), 70); },
-  stomp() { beep(200, 0.12, 'triangle', 0.2, -120); },
-  hurt()  { beep(200, 0.3, 'sawtooth', 0.12, -150); },
-  block() { beep(150, 0.08, 'square', 0.15); },
-  flag()  { [523,659,784,1047].forEach((f,i)=>setTimeout(()=>beep(f,0.2,'square',0.12), i*130)); },
-  win()   { [523,659,784,880,1047,1319].forEach((f,i)=>setTimeout(()=>beep(f,0.25,'triangle',0.15), i*160)); },
+  jump()   { beep(300, 0.18, 'square', 0.12, 250); },
+  swim()   { beep(400, 0.12, 'sine', 0.1, 150); },
+  fly()    { beep(500, 0.06, 'sine', 0.05, 80); },
+  coin()   { beep(900, 0.08, 'square', 0.12); setTimeout(()=>beep(1200,0.15,'square',0.12), 70); },
+  stomp()  { beep(200, 0.12, 'triangle', 0.2, -120); },
+  hurt()   { beep(200, 0.3, 'sawtooth', 0.12, -150); },
+  block()  { beep(150, 0.08, 'square', 0.15); },
+  brick()  { beep(120, 0.15, 'square', 0.18, -60); },
+  power()  { [523,659,784,1047].forEach((f,i)=>setTimeout(()=>beep(f,0.1,'square',0.12), i*60)); },
+  star()   { [784,988,1175,1568].forEach((f,i)=>setTimeout(()=>beep(f,0.09,'square',0.1), i*50)); },
+  heart()  { beep(660, 0.15, 'sine', 0.15); setTimeout(()=>beep(880,0.25,'sine',0.15), 130); },
+  bossHit(){ beep(150, 0.25, 'sawtooth', 0.2, -80); },
+  flag()   { [523,659,784,1047].forEach((f,i)=>setTimeout(()=>beep(f,0.2,'square',0.12), i*130)); },
+  win()    { [523,659,784,880,1047,1319].forEach((f,i)=>setTimeout(()=>beep(f,0.25,'triangle',0.15), i*160)); },
 };
 
+/* ================= MUZICĂ 8-BIT (melodie originală) ================= */
+const MAIN_MELODY = [72,76,79,76, 72,76,79,76, 74,77,81,77, 74,77,81,77,
+                    76,79,83,79, 84,83,81,79, 77,76,74,76, 72,0,67,0];
+const MAIN_BASS   = [48,0,55,0, 48,0,55,0, 50,0,57,0, 50,0,57,0,
+                     52,0,59,0, 48,0,55,0, 53,0,55,0, 48,0,48,0];
+const BOSS_MELODY = [69,0,69,72, 69,76,75,72, 77,76,72,69, 71,71,64,0];
+const BOSS_BASS   = [45,45,57,45, 45,45,57,45, 41,41,53,41, 43,43,55,43];
+const THEME_MUSIC = {
+  campie:   { trans: 0,  tempo: 1.0,  boss: false },
+  subteran: { trans: -5, tempo: 0.92, boss: false },
+  apa:      { trans: -3, tempo: 0.8,  boss: false },
+  nori:     { trans: 4,  tempo: 1.05, boss: false },
+  boss:     { trans: 0,  tempo: 1.25, boss: true },
+};
+let musicMuted = false;
+try { musicMuted = localStorage.getItem('sa_mute') === '1'; } catch(e){}
+let musicCfg = null, musicStep = 0, musicNextT = 0, musicTimer = null;
+function midiFreq(m) { return 440 * Math.pow(2, (m - 69) / 12); }
+function musicNote(m, t, dur, type, vol) {
+  try {
+    const ac = audio();
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.setValueAtTime(midiFreq(m), t);
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(g); g.connect(ac.destination);
+    o.start(t); o.stop(t + dur);
+  } catch(e){}
+}
+function startMusic(theme) {
+  musicCfg = THEME_MUSIC[theme] || THEME_MUSIC.campie;
+  musicStep = 0;
+  try { musicNextT = audio().currentTime + 0.1; } catch(e){ musicCfg = null; return; }
+  if (!musicTimer) musicTimer = setInterval(musicTick, 40);
+}
+function stopMusic() { musicCfg = null; }
+function musicTick() {
+  if (!musicCfg || musicMuted || !AC) return;
+  try {
+    const stepDur = (60 / 140 / 2) / musicCfg.tempo;
+    const mel = musicCfg.boss ? BOSS_MELODY : MAIN_MELODY;
+    const bas = musicCfg.boss ? BOSS_BASS : MAIN_BASS;
+    while (musicNextT < AC.currentTime + 0.15) {
+      if (musicNextT < AC.currentTime - 0.5) musicNextT = AC.currentTime + 0.05;
+      const i = musicStep % mel.length;
+      if (mel[i]) musicNote(mel[i] + musicCfg.trans, musicNextT, stepDur * 0.85, 'square', 0.038);
+      if (bas[i]) musicNote(bas[i] + musicCfg.trans, musicNextT, stepDur * 1.6, 'triangle', 0.05);
+      musicNextT += stepDur;
+      musicStep++;
+    }
+  } catch(e){}
+}
+const btnM = document.getElementById('btnM');
+btnM.textContent = musicMuted ? '🔇' : '🔊';
+btnM.addEventListener('pointerdown', e => {
+  e.preventDefault(); e.stopPropagation();
+  musicMuted = !musicMuted;
+  btnM.textContent = musicMuted ? '🔇' : '🔊';
+  try { localStorage.setItem('sa_mute', musicMuted ? '1' : '0'); } catch(e2){}
+});
+
+/* ================= RECORDURI ================= */
+function loadRecords() {
+  try { return JSON.parse(localStorage.getItem('sa_records')) || {}; } catch(e){ return {}; }
+}
+function saveRecord() {
+  try {
+    const r = loadRecords();
+    const n = CHARACTERS[charIdx].name;
+    if (score > (r[n] || 0)) { r[n] = score; localStorage.setItem('sa_records', JSON.stringify(r)); }
+  } catch(e){}
+}
+
 /* ================= STARE JOC ================= */
-let state = 'select';        // select | play | dead | levelend | win
+let state = 'select';   // select | play | helper | dead | levelend | bossdead | win
 let charIdx = 0;
+let helperIdx = 0;
 let levelIdx = 0;
-let grid = [];               // matrice de tile-uri
+let grid = [];
 let levelW = 0;
+let theme = 'campie';
 let player = null;
+let helper = null;
+let boss = null;
 let enemies = [];
 let coins = [];
+let powerups = [];
 let particles = [];
-let popups = [];             // monede care sar din blocuri
+let popups = [];
 let camX = 0;
 let score = 0;
-let lives = 3;
+let lives = LIVES_START;
 let time = 0;
 let stateTimer = 0;
 let flagX = 0;
 let selHover = 0;
+let selHelperHover = 0;
+let levelSpawn = { x: 96, y: 480 };
+let carryBig = false;      // rămâi mare între niveluri (pierzi la moarte)
+let carryFire = false;     // a doua înghețată = bile de foc 🔥
+let fireballs = [];
+let fireCd = 0;
+let fwT = 0;               // temporizator artificii 🎆
+let rampSteps = [];        // trepte de rampă care „coboară" pe rând
 
 /* ================= INPUT ================= */
 const keys = {};
@@ -184,6 +379,7 @@ addEventListener('keydown', e => {
   if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(e.key)) e.preventDefault();
   const k = e.key.toLowerCase();
   if (!keys[k] && (k===' '||k==='arrowup'||k==='w')) jumpBufferT = JUMP_BUFFER;
+  if (!keys[k] && (k==='x'||k==='control')) shootFireball();   // X sau Ctrl = bilă de foc
   keys[k] = true;
   handleMenuKey(e.key);
 });
@@ -191,11 +387,10 @@ addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
 function inputLeft()  { return keys['arrowleft'] || keys['a'] || touchState.L; }
 function inputRight() { return keys['arrowright'] || keys['d'] || touchState.R; }
+function inputJumpHeld() { return keys[' '] || keys['arrowup'] || keys['w'] || touchState.J; }
 
-/* Touch */
 const touchState = { L:false, R:false, J:false };
 if ('ontouchstart' in window || navigator.maxTouchPoints > 0) document.body.classList.add('touch');
-// plasă de siguranță: dacă detectarea de mai sus dă greș, prima atingere reală afișează butoanele
 addEventListener('pointerdown', e => { if (e.pointerType === 'touch') document.body.classList.add('touch'); }, true);
 function bindBtn(id, down, up) {
   const el = document.getElementById(id);
@@ -209,14 +404,19 @@ function bindBtn(id, down, up) {
 bindBtn('btnL', ()=>touchState.L=true, ()=>touchState.L=false);
 bindBtn('btnR', ()=>touchState.R=true, ()=>touchState.R=false);
 bindBtn('btnJ', ()=>{ touchState.J = true; jumpBufferT = JUMP_BUFFER; if (state!=='play') handleMenuKey('Enter'); }, ()=>{ touchState.J = false; });
+bindBtn('btnF', ()=>{ shootFireball(); }, ()=>{});
+const btnFEl = document.getElementById('btnF');
 
 cv.addEventListener('pointerdown', e => {
   audio();
+  const r = cv.getBoundingClientRect();
+  const x = (e.clientX - r.left) * (W / r.width);
   if (state === 'select') {
-    const r = cv.getBoundingClientRect();
-    const x = (e.clientX - r.left) * (W / r.width);
     selHover = x < W/2 ? 0 : 1;
     chooseChar(selHover);
+  } else if (state === 'helper') {
+    selHelperHover = x < W/2 ? 0 : 1;
+    chooseHelper(selHelperHover);
   } else if (state !== 'play') {
     handleMenuKey('Enter');
   }
@@ -224,29 +424,47 @@ cv.addEventListener('pointerdown', e => {
 
 function handleMenuKey(key) {
   audio();
+  const low = typeof key === 'string' ? key.toLowerCase() : key;
   if (state === 'select') {
-    if (key === 'ArrowLeft' || key.toLowerCase?.() === 'a') selHover = 0;
-    if (key === 'ArrowRight' || key.toLowerCase?.() === 'd') selHover = 1;
+    if (key === 'ArrowLeft' || low === 'a') selHover = 0;
+    if (key === 'ArrowRight' || low === 'd') selHover = 1;
     if (key === 'Enter' || key === ' ') chooseChar(selHover);
     if (key === '1') chooseChar(0);
     if (key === '2') chooseChar(1);
+  } else if (state === 'helper') {
+    if (key === 'ArrowLeft' || low === 'a') selHelperHover = 0;
+    if (key === 'ArrowRight' || low === 'd') selHelperHover = 1;
+    if (key === 'Enter' || key === ' ') chooseHelper(selHelperHover);
+    if (key === '1') chooseHelper(0);
+    if (key === '2') chooseHelper(1);
   } else if (state === 'win' && (key === 'Enter' || key === ' ')) {
-    if (stateTimer > 1) { state = 'select'; score = 0; lives = 3; levelIdx = 0; }
+    if (stateTimer > 1) { saveRecord(); state = 'select'; stopMusic(); score = 0; lives = LIVES_START; levelIdx = 0; }
   }
 }
 function chooseChar(i) {
   charIdx = i;
-  score = 0; lives = 3; levelIdx = 0;
+  score = 0; lives = LIVES_START; levelIdx = 0; carryBig = false; carryFire = false;
   loadLevel(0);
   state = 'play';
+}
+function chooseHelper(i) {
+  helperIdx = i;
+  const cfg = HELPERS[i];
+  helper = { cfg, x: player.x - 80, y: player.y - 40, w: 34, h: Math.round(64 * cfg.scale * 0.8) + 10,
+    vx: 0, vy: 0, onGround: false, dir: 1, anim: 0, cool: 1 };
+  state = 'play';
+  sfx.power();
 }
 
 /* ================= NIVEL ================= */
 function loadLevel(idx) {
-  const rows = LEVELS[idx];
-  levelW = rows[0].length;
+  const rows = LEVELS[idx].map;
+  theme = LEVELS[idx].theme;
+  levelW = Math.max(...rows.map(r => r.length));
   grid = [];
-  enemies = []; coins = []; particles = []; popups = [];
+  enemies = []; coins = []; powerups = []; particles = []; popups = [];
+  fireballs = []; rampSteps = [];
+  boss = null; helper = null; flagX = 0;
   for (let r = 0; r < ROWS; r++) {
     grid[r] = [];
     for (let c = 0; c < levelW; c++) {
@@ -256,38 +474,69 @@ function loadLevel(idx) {
       else if (ch === 'B') t = 2;
       else if (ch === 'Q') t = 3;
       else if (ch === '=') t = 4;
+      else if (ch === 'W') t = 6;
+      else if (ch === 'S') t = 7;
+      else if (ch === 'H') t = 8;
+      else if (ch === 'I') t = 9;
+      else if (ch === 'R') t = 10;    // cărămidă care coboară o rampă la spargere 🪜
       else if (ch === 'C') { coins.push({ c, r, taken:false, anim: Math.random()*6 }); }
       else if (ch === 'E') { enemies.push(makeEnemy(c*TILE, r*TILE)); }
-      else if (ch === 'P') { spawnPlayer(c*TILE, r*TILE); }
+      else if (ch === 'P') { levelSpawn = { x: c*TILE, y: r*TILE }; spawnPlayer(c*TILE, r*TILE); }
       else if (ch === 'F') { flagX = c*TILE + TILE/2; }
+      else if (ch === 'X') { boss = makeBoss(c*TILE, r*TILE); }
       grid[r][c] = t;
     }
   }
   camX = Math.max(0, player.x - W/3);
+  startMusic(theme);
 }
 function makeEnemy(x, y) {
-  return { x, y: y + TILE - 40, w:40, h:40, vx: -ENEMY_SPD, vy:0, onGround:false, dead:false, deadT:0, anim:Math.random()*6 };
+  const kind = theme === 'apa' ? 'fish' : theme === 'nori' ? 'bird' : 'walker';
+  return { kind, x, y: y + TILE - 40, baseY: y + TILE - 40, w: 40, h: 40, vx: -ENEMY_SPD, vy: 0,
+    onGround: false, dead: false, deadT: 0, anim: Math.random()*6 };
+}
+function makeBoss(x, y) {
+  return { x: x - 60, y: y + TILE - 104, w: 120, h: 104, vx: -85, vy: 0, onGround: false,
+    hp: BOSS_HP, maxHp: BOSS_HP, invT: 0, jumpCd: 3.5, dead: false, anim: 0 };
 }
 function spawnPlayer(x, y) {
   const cfg = CHARACTERS[charIdx];
   const h = Math.round(58 * cfg.scale), w = Math.round(30 * cfg.scale);
-  player = { x, y: y + TILE - h, w, h, vx:0, vy:0, onGround:false, coyote:0,
-    dir:1, anim:0, invuln:0 };
+  player = { x, y: y + TILE - h, w, h, baseW: w, baseH: h, big: false, fire: false, vx:0, vy:0,
+    onGround:false, coyote:0, dir:1, anim:0, invuln:0, wingsT:0, starT:0, flap:0 };
+  if (carryBig) growPlayer(true);
+  if (carryFire) player.fire = true;
+}
+function growPlayer(silent) {
+  const p = player;
+  if (!p.big) {
+    p.big = true; carryBig = true;
+    const nh = Math.round(p.baseH * 1.3), nw = Math.round(p.baseW * 1.15);
+    p.y -= nh - p.h;
+    p.h = nh; p.w = nw;
+  }
+  if (!silent) sfx.power();
+}
+function shrinkPlayer() {
+  const p = player;
+  p.big = false; carryBig = false;
+  p.y += p.h - p.baseH;
+  p.h = p.baseH; p.w = p.baseW;
+  p.invuln = 2;
 }
 
 function tileAt(px, py) {
   const c = Math.floor(px / TILE), r = Math.floor(py / TILE);
-  if (c < 0 || c >= levelW) return 1;      // pereți la margini
+  if (c < 0 || c >= levelW) return 1;
   if (r < 0) return 0;
-  if (r >= ROWS) return 0;                 // jos = gol (cazi)
+  if (r >= ROWS) return 0;
   return grid[r][c];
 }
-function solidForBody(t)   { return t === 1 || t === 2 || t === 3 || t === 5; }
-function solidTop(t)       { return solidForBody(t) || t === 4; } // platformele au doar partea de sus
+function solidForBody(t) { return t === 1 || t === 2 || t === 3 || t === 5 || t === 6 || t === 7 || t === 8 || t === 9 || t === 10; }
+function solidTop(t)     { return solidForBody(t) || t === 4; }
 
 /* ================= FIZICĂ ================= */
-function moveBody(b, dt, isPlayer) {
-  // orizontal
+function moveBody(b, dt, isPlayer, grav) {
   b.x += b.vx * dt;
   if (b.vx > 0) {
     const t1 = tileAt(b.x + b.w, b.y + 2), t2 = tileAt(b.x + b.w, b.y + b.h - 2);
@@ -302,9 +551,9 @@ function moveBody(b, dt, isPlayer) {
       if (!isPlayer) b.vx = -b.vx; else b.vx = 0;
     }
   }
-  // vertical
-  b.vy += GRAV * dt;
-  if (b.vy > 1200) b.vy = 1200;
+  b.vy += (grav !== undefined ? grav : GRAV) * dt;
+  const maxFall = theme === 'apa' && isPlayer ? 250 : 1200;
+  if (b.vy > maxFall) b.vy = maxFall;
   const oldBottom = b.y + b.h;
   b.y += b.vy * dt;
   b.onGround = false;
@@ -330,17 +579,46 @@ function moveBody(b, dt, isPlayer) {
 }
 
 function hitBlockAbove(r, b) {
-  // lovim blocul de deasupra capului (Q dă monedă, B se scutură)
   const cMid = Math.floor((b.x + b.w/2) / TILE);
   for (const c of [cMid, Math.floor((b.x+4)/TILE), Math.floor((b.x+b.w-4)/TILE)]) {
-    if (r >= 0 && grid[r] && grid[r][c] === 3) {
-      grid[r][c] = 5; // bloc folosit
+    if (r < 0 || !grid[r]) continue;
+    const t = grid[r][c];
+    if (t === 3) {            // bloc ? → monedă
+      grid[r][c] = 5;
       score += 10;
       popups.push({ x:c*TILE+TILE/2, y:r*TILE, vy:-500, t:0.6 });
       sfx.coin();
       return;
     }
-    if (r >= 0 && grid[r] && grid[r][c] === 2) { sfx.block(); return; }
+    if (t === 2) {            // cărămidă → se sparge!
+      grid[r][c] = 0;
+      score += 5;
+      sfx.brick();
+      for (let i = 0; i < 6; i++)
+        particles.push({ x:c*TILE+TILE/2, y:r*TILE+TILE/2, vx:(Math.random()-0.5)*350,
+          vy:-150-Math.random()*250, t:0.7, col: i%2 ? '#c0562a' : '#7a3418' });
+      return;
+    }
+    if (t === 10) {                        // rampa secretă! 🪜
+      grid[r][c] = 0;
+      score += 20;
+      sfx.brick();
+      for (let i = 0; i < 6; i++)
+        particles.push({ x:c*TILE+TILE/2, y:r*TILE+TILE/2, vx:(Math.random()-0.5)*350,
+          vy:-150-Math.random()*250, t:0.7, col: i%2 ? '#c0562a' : '#7a3418' });
+      let k = 0;
+      for (let rr = r + 1; rr <= 10; rr++, k++) {    // trepte care coboară spre stânga, pe rând
+        rampSteps.push({ r: rr, c1: c - 1 - 2*k, c2: c - 2*k, at: time + 0.3 + k * 0.3 });
+      }
+      return;
+    }
+    if (t === 6 || t === 7 || t === 8 || t === 9) {   // power-up ascuns!
+      grid[r][c] = 5;
+      const type = t === 6 ? 'wings' : t === 7 ? 'star' : t === 8 ? 'heart' : 'ice';
+      powerups.push({ type, x:c*TILE+TILE/2, y:r*TILE, targetY:(r-1)*TILE + TILE/2, phase:'rising' });
+      sfx.power();
+      return;
+    }
   }
 }
 
@@ -351,7 +629,10 @@ function update(dt) {
   if (state !== 'play') { updateFX(dt); return; }
 
   const p = player;
-  // mișcare
+  const flying = p.wingsT > 0 || theme === 'nori';
+  const swimming = theme === 'apa';
+
+  // mișcare orizontală
   if (inputLeft() && !inputRight())  { p.vx -= MOVE_ACC*dt; p.dir = -1; }
   else if (inputRight() && !inputLeft()) { p.vx += MOVE_ACC*dt; p.dir = 1; }
   else {
@@ -360,23 +641,50 @@ function update(dt) {
   }
   p.vx = Math.max(-MOVE_MAX, Math.min(MOVE_MAX, p.vx));
 
-  // săritură (cu coyote time + buffer, prietenos pentru copii)
+  // săritură / înot / zbor
   if (p.onGround) p.coyote = COYOTE; else p.coyote -= dt;
   if (jumpBufferT > 0) jumpBufferT -= dt;
-  if (jumpBufferT > 0 && p.coyote > 0) {
-    p.vy = -JUMP_V;
-    p.coyote = 0; jumpBufferT = 0;
-    sfx.jump();
+  let grav = GRAV;
+  if (swimming) {
+    grav = 520;
+    if (jumpBufferT > 0) {          // fluturare de înot — merge oricând
+      p.vy = -330;
+      jumpBufferT = 0;
+      p.flap = 0.25;
+      sfx.swim();
+    }
+  } else if (flying) {
+    grav = 1500;
+    if (jumpBufferT > 0 && p.coyote > 0) {   // săritură normală de pe sol
+      p.vy = -JUMP_V * 0.8;
+      p.coyote = 0; jumpBufferT = 0;
+      sfx.jump();
+    }
+    if (inputJumpHeld() && !p.onGround) {    // ține apăsat = zbori în sus
+      p.vy -= 3400 * dt;
+      if (p.vy < -360) p.vy = -360;
+      p.flap = 0.15;
+      if (Math.floor(time*6) % 3 === 0 && Math.random() < 0.1) sfx.fly();
+    }
+    if (p.vy > 420) p.vy = 420;
+  } else {
+    if (jumpBufferT > 0 && p.coyote > 0) {
+      p.vy = -JUMP_V;
+      p.coyote = 0; jumpBufferT = 0;
+      sfx.jump();
+    }
+    if (p.vy < -300 && !inputJumpHeld()) p.vy = -300;
   }
-  // săritură mai mică dacă dai drumul repede
-  if (p.vy < -300 && !(keys[' ']||keys['arrowup']||keys['w']||touchState.J)) p.vy = -300;
 
-  moveBody(p, dt, true);
+  moveBody(p, dt, true, grav);
   if (Math.abs(p.vx) > 20 && p.onGround) p.anim += dt * 12; else if (p.onGround) p.anim = 0;
+  if (!p.onGround && (flying || swimming)) p.anim += dt * 10;
   if (p.invuln > 0) p.invuln -= dt;
+  if (p.wingsT > 0) p.wingsT -= dt;
+  if (p.starT > 0) p.starT -= dt;
+  if (p.flap > 0) p.flap -= dt;
 
-  // cădere în gol
-  if (p.y > H + 100) hurtPlayer(true);
+  if (p.y > H + 100) hurtPlayer(true);   // căderea în gol e mereu fatală
 
   // monede
   for (const cn of coins) {
@@ -389,33 +697,97 @@ function update(dt) {
     }
   }
 
+  // power-up-uri (ies din cărămidă, apoi merg ca ciupercile din Mario)
+  for (const pu of powerups) {
+    if (pu.phase === 'rising') {
+      pu.y -= 90 * dt;
+      if (pu.y <= pu.targetY) { pu.y = pu.targetY; pu.phase = 'walk'; pu.vx = 70; pu.vy = 0; }
+    } else {
+      const body = { x: pu.x - 16, y: pu.y - 16, w: 32, h: 32, vx: pu.vx, vy: pu.vy };
+      moveBody(body, dt, false);
+      pu.x = body.x + 16; pu.y = body.y + 16; pu.vx = body.vx; pu.vy = body.vy;
+      if (pu.y > H + 200) pu.taken = true;
+    }
+    if (Math.abs(p.x + p.w/2 - pu.x) < 40 && Math.abs(p.y + p.h/2 - pu.y) < 46) {
+      pu.taken = true;
+      if (pu.type === 'wings') { p.wingsT = WINGS_TIME; sfx.power(); }
+      else if (pu.type === 'star') { p.starT = STAR_TIME; sfx.star(); }
+      else if (pu.type === 'heart') { lives = Math.min(lives + 1, LIVES_START); sfx.heart(); }
+      else if (pu.type === 'ice') {
+        if (!p.big) growPlayer();                              // prima înghețată: MARE 🍦
+        else if (!p.fire) { p.fire = true; carryFire = true; sfx.star(); }   // a doua: bile de foc 🔥
+        else score += 50;
+      }
+      score += 25;
+      for (let i=0;i<10;i++) particles.push({ x:pu.x, y:pu.y, vx:(Math.random()-0.5)*300, vy:-Math.random()*300, t:0.6,
+        col: pu.type==='star' ? '#ffd700' : pu.type==='heart' ? '#ff6090' : '#fff' });
+    }
+  }
+  powerups = powerups.filter(pu => !pu.taken);
+
   // inamici
   for (const en of enemies) {
     if (en.dead) { en.deadT -= dt; continue; }
     en.anim += dt * 8;
-    // întoarce-te la margine de platformă
-    const aheadX = en.vx < 0 ? en.x - 2 : en.x + en.w + 2;
-    if (en.onGround && !solidTop(tileAt(aheadX, en.y + en.h + 4))) en.vx = -en.vx;
-    moveBody(en, dt, false);
-    if (en.y > H + 200) { en.dead = true; en.deadT = 0; continue; }
-    // coliziune cu jucătorul
+    if (en.kind === 'walker') {
+      // întoarce-te cu o dală înainte de marginea gropii (să nu pândească pe buza ei)
+      const aheadX = en.vx < 0 ? en.x - 36 : en.x + en.w + 36;
+      if (en.onGround && !solidTop(tileAt(aheadX, en.y + en.h + 4))) en.vx = -en.vx;
+      moveBody(en, dt, false);
+      if (en.y > H + 200) { en.dead = true; en.deadT = 0; continue; }
+    } else {                       // pește / pasăre — plutesc
+      en.x += en.vx * dt;
+      const aheadX = en.vx < 0 ? en.x - 2 : en.x + en.w + 2;
+      if (solidForBody(tileAt(aheadX, en.y + en.h/2)) || en.x < 0 || en.x > levelW*TILE - en.w) en.vx = -en.vx;
+      en.y = en.baseY + Math.sin(en.anim * 0.6) * (en.kind === 'bird' ? 42 : 26);
+    }
     if (rectHit(p, en)) {
-      if (p.vy > 100 && p.y + p.h - en.y < 28) {
+      if (p.starT > 0) {           // steaua distruge tot!
+        en.dead = true; en.deadT = 0.4;
+        score += 25; sfx.stomp();
+        for (let i=0;i<8;i++) particles.push({ x:en.x+en.w/2, y:en.y+en.h/2, vx:(Math.random()-0.5)*300, vy:-Math.random()*250, t:0.4, col:'#ffd700' });
+      } else if ((p.vy > 100 && p.y + p.h - en.y < 28) ||
+                 (p.vy > 400 && p.y + p.h - en.y < en.h * 0.9)) {   // cădere rapidă = turtit oriunde l-ai atins
         en.dead = true; en.deadT = 0.5;
         p.vy = -JUMP_V * 0.55;
         score += 25; sfx.stomp();
         for (let i=0;i<8;i++) particles.push({ x:en.x+en.w/2, y:en.y+en.h/2, vx:(Math.random()-0.5)*300, vy:-Math.random()*200, t:0.4, col:'#a05a2c' });
       } else if (p.invuln <= 0) {
-        hurtPlayer(false);
+        hurtPlayer();
       }
     }
   }
+  // bile de foc 🔥
+  if (fireCd > 0) fireCd -= dt;
+  for (const fb of fireballs) {
+    fb.t -= dt;
+    fb.vy += 1300 * dt;
+    fb.x += fb.vx * dt; fb.y += fb.vy * dt;
+    if (fb.vy > 0 && solidTop(tileAt(fb.x, fb.y + 9))) fb.vy = -380;       // ricoșează pe sol
+    if (solidForBody(tileAt(fb.x + Math.sign(fb.vx) * 10, fb.y))) fb.t = 0;
+    for (const en of enemies) {
+      if (!en.dead && fb.t > 0 && fb.x > en.x - 8 && fb.x < en.x + en.w + 8 && fb.y > en.y - 8 && fb.y < en.y + en.h + 8) {
+        en.dead = true; en.deadT = 0.4; fb.t = 0; score += 25; sfx.stomp();
+        for (let i=0;i<8;i++) particles.push({ x:en.x+en.w/2, y:en.y+en.h/2, vx:(Math.random()-0.5)*300, vy:-Math.random()*250, t:0.4, col:'#ff9f1c' });
+      }
+    }
+    if (boss && !boss.dead && fb.t > 0 && boss.invT <= 0 &&
+        fb.x > boss.x && fb.x < boss.x + boss.w && fb.y > boss.y && fb.y < boss.y + boss.h) {
+      fb.t = 0; bossDamage(1);
+    }
+  }
+  fireballs = fireballs.filter(fb => fb.t > 0);
   enemies = enemies.filter(e => !e.dead || e.deadT > 0);
 
+  // boss + ajutor
+  if (boss && !boss.dead) updateBoss(dt);
+  if (helper) updateHelper(dt);
+
   // steag
-  if (p.x + p.w/2 > flagX) {
+  if (flagX > 0 && p.x + p.w/2 > flagX) {
     state = 'levelend'; stateTimer = 0;
     score += 100;
+    saveRecord();
     sfx.flag();
   }
 
@@ -427,7 +799,93 @@ function update(dt) {
   updateFX(dt);
 }
 
+function updateBoss(dt) {
+  const b = boss, p = player;
+  b.anim += dt * 6;
+  if (b.invT > 0) b.invT -= dt;
+  // viteza crește când e rănit
+  const spd = 70 + (1 - b.hp / b.maxHp) * 55;
+  b.vx = b.vx < 0 ? -spd : spd;
+  b.jumpCd -= dt;
+  if (b.jumpCd <= 0 && b.onGround) { b.vy = -620; b.jumpCd = 2.5 + Math.random() * 2; }
+  moveBody(b, dt, false);
+
+  // lovit de jucător
+  if (rectHit(p, b)) {
+    if (p.vy > 100 && p.y + p.h - b.y < 58 && b.invT <= 0) {
+      bossDamage(2);
+      p.vy = -JUMP_V * 0.6;
+    } else if (p.invuln <= 0 && b.invT <= 0) {
+      hurtPlayer();
+    }
+  }
+}
+function bossDamage(dmg) {
+  boss.hp -= dmg;
+  boss.invT = 0.9;
+  score += 50;
+  sfx.bossHit();
+  for (let i=0;i<10;i++) particles.push({ x:boss.x+boss.w/2, y:boss.y+30, vx:(Math.random()-0.5)*400, vy:-Math.random()*300, t:0.5, col:'#8a4aa0' });
+  if (boss.hp <= 0) {
+    boss.dead = true;
+    state = 'bossdead'; stateTimer = 0;
+    score += 500;
+    saveRecord();
+    stopMusic();
+    sfx.win();
+    for (let i=0;i<40;i++) particles.push({ x:boss.x+boss.w/2, y:boss.y+boss.h/2, vx:(Math.random()-0.5)*600, vy:-Math.random()*500, t:1.2,
+      col:['#8a4aa0','#ffd700','#e63946','#2a9d8f'][i%4] });
+  }
+}
+function updateHelper(dt) {
+  const h = helper, b = boss;
+  h.cool -= dt;
+  if (b && !b.dead) {
+    const targetX = b.x + b.w/2 - h.w/2;
+    const dx = targetX - h.x;
+    if (Math.abs(dx) > 30) { h.vx += Math.sign(dx) * 2000 * dt; h.dir = Math.sign(dx) || 1; }
+    else { h.vx *= 0.85; }
+    h.vx = Math.max(-240, Math.min(240, h.vx));
+    if (Math.abs(dx) < 260 && h.onGround && h.cool <= 0 && b.invT <= 0 &&
+        Math.sign(b.vx) !== Math.sign(dx)) {   // sare când bossul vine spre el
+      h.vy = -JUMP_V * 0.95;
+      h.cool = 1.4;
+    }
+    if (!h.onGround) h.vx += Math.sign(dx) * 1100 * dt;   // se ghidează în aer spre boss
+    if (rectHit(h, b) && h.vy > 100 && h.y + h.h - b.y < 62 && b.invT <= 0) {
+      bossDamage(1);              // 50% din damage-ul jucătorului
+      h.vy = -JUMP_V * 0.5;
+    }
+  } else {
+    h.vx *= 0.9;
+  }
+  moveBody(h, dt, false);
+  h.vx = Math.max(-240, Math.min(240, h.vx));   // moveBody poate inversa; limităm
+  if (Math.abs(h.vx) > 20 && h.onGround) h.anim += dt * 11; else if (h.onGround) h.anim = 0;
+}
+
 function updateFX(dt) {
+  // treptele rampei apar pe rând ✨
+  for (const st of rampSteps) {
+    if (time >= st.at && !st.done) {
+      st.done = true;
+      for (const cc of [st.c1, st.c2]) {
+        if (cc >= 0 && cc < levelW && grid[st.r][cc] === 0) {
+          grid[st.r][cc] = 4;
+          for (let i=0;i<5;i++) particles.push({ x:cc*TILE+TILE/2, y:st.r*TILE+8, vx:(Math.random()-0.5)*160, vy:-Math.random()*140, t:0.5, col:'#b28dff' });
+        }
+      }
+      beep(400 + st.r * 30, 0.1, 'triangle', 0.1);
+    }
+  }
+  rampSteps = rampSteps.filter(st => !st.done);
+
+  // artificii la final de nivel 🎆
+  if (state === 'levelend' || state === 'bossdead') {
+    fwT -= dt;
+    if (fwT <= 0) { fwT = 0.38; spawnFirework(); }
+  }
+
   for (const pt of particles) { pt.t -= dt; pt.x += pt.vx*dt; pt.y += pt.vy*dt; pt.vy += 800*dt; }
   particles = particles.filter(pt => pt.t > 0);
   for (const pp of popups) { pp.t -= dt; pp.y += pp.vy*dt; pp.vy += 1400*dt; }
@@ -435,22 +893,75 @@ function updateFX(dt) {
 
   if (state === 'levelend' && stateTimer > 2.2) {
     levelIdx++;
-    if (levelIdx >= LEVELS.length) { state = 'win'; stateTimer = 0; sfx.win(); }
-    else { loadLevel(levelIdx); state = 'play'; }
+    if (levelIdx >= LEVELS.length) { state = 'win'; stateTimer = 0; stopMusic(); sfx.win(); }
+    else {
+      loadLevel(levelIdx);
+      state = LEVELS[levelIdx].theme === 'boss' ? 'helper' : 'play';
+      if (state === 'helper') stopMusic();
+    }
   }
+  if (state === 'bossdead' && stateTimer > 2.5) { state = 'win'; stateTimer = 0; }
   if (state === 'dead' && stateTimer > 1.5) {
-    if (lives <= 0) { lives = 3; }   // fără game over dur — o luăm de la capăt cu 3 vieți
-    loadLevel(levelIdx);
-    state = 'play';
+    if (lives <= 0) { lives = LIVES_START; }
+    if (theme === 'boss' && boss && !boss.dead) {
+      // bossul rămâne rănit — doar jucătorul reapare la start
+      spawnPlayer(levelSpawn.x, levelSpawn.y);
+      state = 'play';
+    } else {
+      loadLevel(levelIdx);
+      if (LEVELS[levelIdx].theme === 'boss') {
+        chooseHelper(helperIdx);    // ajutorul revine automat
+      } else {
+        state = 'play';
+      }
+    }
     player.invuln = 2;
   }
 }
 
-function hurtPlayer(fell) {
+function spawnFirework() {
+  const fx = camX + 120 + Math.random() * (W - 240);
+  const fy = 80 + Math.random() * 190;
+  const cols = ['#ff5252','#ffd700','#4dd0e1','#b388ff','#69f0ae','#ff9f1c'];
+  const col = cols[Math.floor(Math.random()*cols.length)];
+  for (let i = 0; i < 22; i++) {
+    const a = i / 22 * Math.PI * 2 + Math.random()*0.2;
+    const sp = 150 + Math.random() * 170;
+    particles.push({ x: fx, y: fy, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp - 60, t: 0.9 + Math.random()*0.4, col });
+  }
+  beep(500 + Math.random()*400, 0.22, 'triangle', 0.08, -250);
+}
+
+function shootFireball() {
+  const p = player;
+  if (!p || !p.fire || state !== 'play' || fireCd > 0) return;
+  fireCd = 0.35;
+  fireballs.push({ x: p.x + p.w/2 + p.dir*18, y: p.y + p.h*0.45, vx: p.dir*430, vy: 60, t: 2.2 });
+  beep(600, 0.1, 'square', 0.1, -300);
+}
+
+function hurtPlayer(fatal) {
+  const p = player;
+  if (!fatal && p.fire) {
+    // pierzi întâi puterea de foc, rămâi mare
+    p.fire = false; carryFire = false;
+    p.invuln = 2;
+    sfx.hurt();
+    for (let i=0;i<8;i++) particles.push({ x:p.x+p.w/2, y:p.y+p.h/2, vx:(Math.random()-0.5)*250, vy:-Math.random()*250, t:0.5, col:'#ff9f1c' });
+    return;
+  }
+  if (!fatal && p.big) {
+    // ești mare: prima lovitură doar te micșorează, nu pierzi viața
+    shrinkPlayer();
+    sfx.hurt();
+    for (let i=0;i<8;i++) particles.push({ x:p.x+p.w/2, y:p.y+p.h/2, vx:(Math.random()-0.5)*250, vy:-Math.random()*250, t:0.5, col:'#ffd9ec' });
+    return;
+  }
+  carryBig = false; carryFire = false;
   lives--;
+  saveRecord();
   sfx.hurt();
   state = 'dead'; stateTimer = 0;
-  const p = player;
   for (let i=0;i<10;i++) particles.push({ x:p.x+p.w/2, y:p.y+p.h/2, vx:(Math.random()-0.5)*300, vy:-Math.random()*300, t:0.6, col:CHARACTERS[charIdx].shirt });
 }
 
@@ -460,50 +971,59 @@ function rectHit(a, b) {
 
 /* ================= DESEN ================= */
 function draw() {
-  // cer
-  const sky = ctx.createLinearGradient(0,0,0,H);
-  sky.addColorStop(0, '#5c94fc'); sky.addColorStop(1, '#9cc6ff');
-  ctx.fillStyle = sky; ctx.fillRect(0,0,W,H);
+  drawBackground();
 
   if (state === 'select') { drawSelect(); return; }
-
-  drawClouds();
-  drawHills();
 
   ctx.save();
   ctx.translate(-Math.floor(camX), 0);
 
-  // tile-uri
   const c0 = Math.floor(camX/TILE), c1 = Math.min(levelW-1, c0 + Math.ceil(W/TILE) + 1);
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = c0; c <= c1; c++) {
+  for (let r = 0; r < ROWS; r++)
+    for (let c = c0; c <= c1; c++)
       drawTile(grid[r][c], c*TILE, r*TILE);
-    }
-  }
 
-  drawFlag();
+  if (flagX > 0) drawFlag();
 
-  // monede
   for (const cn of coins) {
     if (cn.taken) continue;
     drawCoin(cn.c*TILE + TILE/2, cn.r*TILE + TILE/2, cn.anim);
   }
   for (const pp of popups) drawCoin(pp.x, pp.y, time*10);
-
-  // inamici
+  for (const pu of powerups) drawPowerup(pu);
+  for (const fb of fireballs) {
+    ctx.fillStyle = '#ff9f1c';
+    ctx.beginPath(); ctx.arc(fb.x, fb.y, 9, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#ffe27a';
+    ctx.beginPath(); ctx.arc(fb.x - Math.sign(fb.vx)*2, fb.y - 2, 4.5, 0, Math.PI*2); ctx.fill();
+  }
   for (const en of enemies) drawEnemy(en);
+  if (boss) drawBoss();
+  if (helper) drawKidOnFoot(helper.x + helper.w/2, helper.y + helper.h, helper.cfg, helper.h, helper.dir, helper.anim, !helper.onGround);
 
-  // jucător
   if (state !== 'dead') {
     const p = player;
     if (!(p.invuln > 0 && Math.floor(time*12)%2===0)) {
-      drawKid(p.x + p.w/2, p.y + p.h, CHARACTERS[charIdx], p.h, p.dir, p.anim, !p.onGround);
+      const wings = p.wingsT > 0 || theme === 'nori';
+      if (p.starT > 0) {   // invincibil: tot personajul în culorile curcubeului 🌈
+        ctx.filter = 'hue-rotate(' + (Math.floor(time * 600) % 360) + 'deg) saturate(1.9) brightness(1.15)';
+      }
+      drawKid(p.x + p.w/2, p.y + p.h, CHARACTERS[charIdx], p.h, p.dir, p.anim, !p.onGround, wings);
+      ctx.filter = 'none';
+      if (p.starT > 0) drawStarAura(p);
+      if (p.fire) {        // flacăra puterii de foc
+        const fl = 5 + Math.sin(time*18) * 2.5;
+        const fx = p.x + p.w/2 + p.dir * (p.w/2 + 9);
+        ctx.fillStyle = '#ff9f1c';
+        ctx.beginPath(); ctx.arc(fx, p.y + p.h*0.42, fl, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#ffe27a';
+        ctx.beginPath(); ctx.arc(fx, p.y + p.h*0.42 - 2, fl*0.5, 0, Math.PI*2); ctx.fill();
+      }
     }
   }
 
-  // particule
   for (const pt of particles) {
-    ctx.globalAlpha = Math.max(0, pt.t*2);
+    ctx.globalAlpha = Math.max(0, Math.min(1, pt.t*2));
     ctx.fillStyle = pt.col;
     ctx.fillRect(pt.x-4, pt.y-4, 8, 8);
   }
@@ -512,20 +1032,94 @@ function draw() {
   ctx.restore();
 
   drawHUD();
+  if (boss || (state === 'helper')) drawBossBar();
 
+  if (state === 'helper') drawHelperSelect();
   if (state === 'dead') drawOverlay(lives > 0 ? 'Ups! 😅 Mai încearcă!' : 'Nu-i nimic! 💪 O luăm de la capăt!', '');
-  if (state === 'levelend') drawOverlay('Bravo! 🎉', levelIdx+1 < LEVELS.length ? 'Urmează: ' + LEVEL_NAMES[levelIdx+1] : 'Ai terminat totul!');
+  if (state === 'levelend') drawOverlay('Bravo! 🎉', levelIdx+1 < LEVELS.length ? 'Urmează: ' + LEVELS[levelIdx+1].name : 'Ai terminat totul!');
+  if (state === 'bossdead') drawOverlay('AȚI ÎNVINS BOSSUL! 🐉💥', 'Echipă de aur! ⭐');
   if (state === 'win') drawWin();
+}
+
+function drawBackground() {
+  let top = '#5c94fc', bot = '#9cc6ff';
+  if (theme === 'subteran' && state !== 'select') { top = '#191927'; bot = '#2c2c44'; }
+  if (theme === 'apa' && state !== 'select')      { top = '#1a6ac0'; bot = '#0a3a80'; }
+  if (theme === 'nori' && state !== 'select')     { top = '#7ec0ff'; bot = '#d8ecff'; }
+  if (theme === 'boss' && state !== 'select')     { top = '#2a1425'; bot = '#4a2438'; }
+  const sky = ctx.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0, top); sky.addColorStop(1, bot);
+  ctx.fillStyle = sky; ctx.fillRect(0,0,W,H);
+
+  if (state === 'select') { drawClouds(); drawHills(); return; }
+
+  if (theme === 'campie') { drawClouds(); drawHills(); }
+  else if (theme === 'subteran') {
+    ctx.fillStyle = 'rgba(120,120,180,.12)';
+    for (let i = 0; i < 12; i++) {
+      const x = ((i * 233 + 60 - camX*0.4) % (W + 300)) - 150;
+      ctx.fillRect(x, 60 + (i%4)*110, 14, 34);
+    }
+  } else if (theme === 'apa') {
+    ctx.fillStyle = 'rgba(255,255,255,.06)';
+    for (let i = 0; i < 5; i++) {
+      const x = ((i * 300 + 80 - camX*0.2) % (W + 400)) - 200;
+      ctx.beginPath();
+      ctx.moveTo(x, 0); ctx.lineTo(x + 130, 0); ctx.lineTo(x + 320, H); ctx.lineTo(x + 190, H);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.fillStyle = 'rgba(255,255,255,.25)';
+    for (let i = 0; i < 14; i++) {
+      const bx = ((i * 173 + 40 - camX*0.3) % (W + 100)) - 50;
+      const by = H - ((time * (30 + i*7) + i * 210) % (H + 60));
+      ctx.beginPath(); ctx.arc(bx, by, 3 + (i%3)*2, 0, Math.PI*2); ctx.fill();
+    }
+  } else if (theme === 'nori') {
+    ctx.fillStyle = '#ffd23f';
+    ctx.beginPath(); ctx.arc(W - 130, 90, 46, 0, Math.PI*2); ctx.fill();
+    drawClouds();
+  } else if (theme === 'boss') {
+    ctx.fillStyle = 'rgba(255,90,40,.14)';
+    for (let i = 0; i < 8; i++) {
+      const x = ((i * 320 + 100 - camX*0.5) % (W + 400)) - 200;
+      ctx.beginPath();
+      ctx.moveTo(x, H); ctx.lineTo(x + 40, H - 130 - (i%3)*50); ctx.lineTo(x + 80, H);
+      ctx.closePath(); ctx.fill();
+    }
+  }
 }
 
 function drawTile(t, x, y) {
   if (t === 0) return;
-  if (t === 1) { // pământ
-    ctx.fillStyle = '#c8824a'; ctx.fillRect(x, y, TILE, TILE);
-    ctx.fillStyle = '#5cb85c'; ctx.fillRect(x, y, TILE, 10);
-    ctx.fillStyle = '#8a5a30';
-    ctx.fillRect(x+6, y+20, 8, 8); ctx.fillRect(x+28, y+32, 8, 8); ctx.fillRect(x+18, y+14, 6, 6);
-  } else if (t === 2) { // cărămidă
+  if (t === 1) {
+    if (theme === 'subteran') {
+      ctx.fillStyle = '#3c3c5e'; ctx.fillRect(x, y, TILE, TILE);
+      ctx.fillStyle = '#50507a'; ctx.fillRect(x, y, TILE, 8);
+      ctx.fillStyle = '#2c2c48'; ctx.fillRect(x+8, y+20, 10, 10); ctx.fillRect(x+28, y+32, 8, 8);
+    } else if (theme === 'apa') {
+      ctx.fillStyle = '#d8c27a'; ctx.fillRect(x, y, TILE, TILE);
+      ctx.fillStyle = '#eeda94'; ctx.fillRect(x, y, TILE, 8);
+      ctx.fillStyle = '#b8a25c'; ctx.fillRect(x+10, y+22, 8, 6); ctx.fillRect(x+30, y+34, 8, 6);
+    } else if (theme === 'nori') {
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(x, y+8, TILE, TILE-8);
+      ctx.beginPath();
+      ctx.arc(x+10, y+12, 12, 0, Math.PI*2);
+      ctx.arc(x+26, y+8, 14, 0, Math.PI*2);
+      ctx.arc(x+40, y+12, 11, 0, Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = '#dfe9f5'; ctx.fillRect(x+8, y+34, 12, 6);
+    } else if (theme === 'boss') {
+      ctx.fillStyle = '#4a3a50'; ctx.fillRect(x, y, TILE, TILE);
+      ctx.strokeStyle = '#32242e'; ctx.lineWidth = 2;
+      ctx.strokeRect(x+1, y+1, TILE-2, TILE-2);
+      ctx.strokeRect(x+1, y+1, TILE/2, TILE/2);
+    } else {
+      ctx.fillStyle = '#c8824a'; ctx.fillRect(x, y, TILE, TILE);
+      ctx.fillStyle = '#5cb85c'; ctx.fillRect(x, y, TILE, 10);
+      ctx.fillStyle = '#8a5a30';
+      ctx.fillRect(x+6, y+20, 8, 8); ctx.fillRect(x+28, y+32, 8, 8); ctx.fillRect(x+18, y+14, 6, 6);
+    }
+  } else if (t === 2 || t === 6 || t === 7 || t === 8 || t === 9 || t === 10) {   // cărămizile cu secrete arată identic 😉
     ctx.fillStyle = '#c0562a'; ctx.fillRect(x, y, TILE, TILE);
     ctx.strokeStyle = '#7a3418'; ctx.lineWidth = 3;
     ctx.strokeRect(x+1.5, y+1.5, TILE-3, TILE-3);
@@ -535,17 +1129,19 @@ function drawTile(t, x, y) {
     ctx.moveTo(x+TILE/4, y+TILE/2); ctx.lineTo(x+TILE/4, y+TILE);
     ctx.moveTo(x+3*TILE/4, y+TILE/2); ctx.lineTo(x+3*TILE/4, y+TILE);
     ctx.stroke();
-  } else if (t === 3) { // bloc ?
+  } else if (t === 3) {
     const bounce = Math.sin(time*4) * 2;
     ctx.fillStyle = '#f8b800'; ctx.fillRect(x, y, TILE, TILE);
     ctx.strokeStyle = '#9a6a00'; ctx.lineWidth = 3; ctx.strokeRect(x+2, y+2, TILE-4, TILE-4);
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 28px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText('?', x + TILE/2, y + TILE/2 + bounce);
-  } else if (t === 4) { // platformă
-    ctx.fillStyle = '#2a9d3a'; ctx.fillRect(x, y, TILE, 14);
-    ctx.fillStyle = '#1a7a28'; ctx.fillRect(x, y+10, TILE, 4);
-  } else if (t === 5) { // bloc folosit
+  } else if (t === 4) {
+    ctx.fillStyle = theme === 'nori' ? '#fff' : theme === 'subteran' ? '#6a5a9a' : '#2a9d3a';
+    ctx.fillRect(x, y, TILE, 14);
+    ctx.fillStyle = theme === 'nori' ? '#d8e4f0' : theme === 'subteran' ? '#4a3a72' : '#1a7a28';
+    ctx.fillRect(x, y+10, TILE, 4);
+  } else if (t === 5) {
     ctx.fillStyle = '#9a7a4a'; ctx.fillRect(x, y, TILE, TILE);
     ctx.strokeStyle = '#6a5230'; ctx.lineWidth = 3; ctx.strokeRect(x+2, y+2, TILE-4, TILE-4);
   }
@@ -560,50 +1156,334 @@ function drawCoin(x, y, anim) {
   ctx.beginPath(); ctx.ellipse(x, y, w*0.55, 9, 0, 0, Math.PI*2); ctx.fill();
 }
 
+function drawPowerup(pu) {
+  const bob = pu.phase === 'walk' ? Math.sin(time*8) * 2 : 0;
+  const x = pu.x, y = pu.y + bob;
+  if (pu.type === 'wings') {
+    const fl = Math.sin(time*14) * 6;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.ellipse(x-18, y-4+fl*0.3, 10, 5, -0.5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x+18, y-4+fl*0.3, 10, 5, 0.5, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#e63946';
+    ctx.beginPath(); ctx.arc(x, y-4, 14, Math.PI, 0); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(x-6, y-9, 3.5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x+5, y-7, 3, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#ffe0c2';
+    ctx.fillRect(x-7, y-4, 14, 10);
+  } else if (pu.type === 'star') {
+    ctx.save();
+    ctx.translate(x, y-2);
+    ctx.rotate(time*3);
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const rr = i % 2 === 0 ? 16 : 7;
+      const a = i * Math.PI / 5 - Math.PI/2;
+      ctx.lineTo(Math.cos(a)*rr, Math.sin(a)*rr);
+    }
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  } else if (pu.type === 'ice') {
+    // înghețată: cornet + două cupe 🍦
+    ctx.fillStyle = '#d9a066';
+    ctx.beginPath(); ctx.moveTo(x-9, y-4); ctx.lineTo(x+9, y-4); ctx.lineTo(x, y+16); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#b8814a'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(x-5, y+1); ctx.lineTo(x+7, y-2); ctx.moveTo(x-7, y-2); ctx.lineTo(x+5, y+3); ctx.stroke();
+    ctx.fillStyle = '#ff9fc8';
+    ctx.beginPath(); ctx.arc(x-4, y-8, 7, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#fff6e8';
+    ctx.beginPath(); ctx.arc(x+5, y-9, 6.5, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#e63946';
+    ctx.beginPath(); ctx.arc(x+5, y-15, 2.5, 0, Math.PI*2); ctx.fill();
+  } else if (pu.type === 'heart') {
+    const s = 1 + Math.sin(time*6)*0.12;
+    ctx.save();
+    ctx.translate(x, y-2);
+    ctx.scale(s, s);
+    ctx.fillStyle = '#ff5090';
+    ctx.beginPath();
+    ctx.moveTo(0, 12);
+    ctx.bezierCurveTo(-16, -2, -10, -14, 0, -6);
+    ctx.bezierCurveTo(10, -14, 16, -2, 0, 12);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawStarAura(p) {
+  for (let i = 0; i < 5; i++) {
+    const a = time * 5 + i * Math.PI * 2 / 5;
+    const x = p.x + p.w/2 + Math.cos(a) * 34;
+    const y = p.y + p.h/2 + Math.sin(a) * 34;
+    ctx.fillStyle = ['#ffd700','#ff6090','#7fd4ff','#a0ff90','#ffb060'][i];
+    ctx.fillRect(x-3, y-3, 6, 6);
+  }
+}
+
 function drawEnemy(en) {
   const x = en.x, y = en.y, w = en.w, h = en.h;
-  if (en.dead) { // turtit
-    ctx.fillStyle = '#a05a2c';
+  if (en.dead) {
+    ctx.fillStyle = en.kind === 'fish' ? '#5090c0' : en.kind === 'bird' ? '#8060a0' : '#a05a2c';
     ctx.beginPath(); ctx.ellipse(x+w/2, y+h-8, w/2, 8, 0, 0, Math.PI*2); ctx.fill();
     return;
   }
   const wob = Math.sin(en.anim) * 2;
-  // corp ciupercă supărată
-  ctx.fillStyle = '#a05a2c';
-  ctx.beginPath(); ctx.ellipse(x+w/2, y+h/2+wob*0.3, w/2, h/2, 0, 0, Math.PI*2); ctx.fill();
-  // picioare
-  ctx.fillStyle = '#6a3a18';
-  ctx.beginPath(); ctx.ellipse(x+10, y+h-4, 8, 6, 0, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(x+w-10, y+h-4, 8, 6, 0, 0, Math.PI*2); ctx.fill();
-  // ochi
-  ctx.fillStyle = '#fff';
-  ctx.beginPath(); ctx.ellipse(x+12, y+14+wob*0.3, 6, 8, 0, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(x+w-12, y+14+wob*0.3, 6, 8, 0, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#000';
-  ctx.beginPath(); ctx.arc(x+12, y+17+wob*0.3, 3, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(x+w-12, y+17+wob*0.3, 3, 0, Math.PI*2); ctx.fill();
-  // sprâncene supărate
-  ctx.strokeStyle = '#3a2010'; ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.moveTo(x+6, y+6); ctx.lineTo(x+17, y+11); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(x+w-6, y+6); ctx.lineTo(x+w-17, y+11); ctx.stroke();
+  if (en.kind === 'fish') {
+    const d = en.vx < 0 ? -1 : 1;
+    ctx.save();
+    ctx.translate(x+w/2, y+h/2);
+    ctx.scale(d, 1);
+    ctx.fillStyle = '#58a0d8';
+    ctx.beginPath(); ctx.ellipse(0, 0, w/2, h/2.6, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#3a80b8';                       // coadă
+    ctx.beginPath(); ctx.moveTo(-w/2, 0); ctx.lineTo(-w/2-12, -10+wob); ctx.lineTo(-w/2-12, 10+wob); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(w/4, -4, 5, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.arc(w/4+1, -4, 2.5, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  } else if (en.kind === 'bird') {
+    const d = en.vx < 0 ? -1 : 1;
+    const fl = Math.sin(en.anim*2) * 8;
+    ctx.save();
+    ctx.translate(x+w/2, y+h/2);
+    ctx.scale(d, 1);
+    ctx.fillStyle = '#8060a0';
+    ctx.beginPath(); ctx.ellipse(0, 0, w/2.2, h/2.6, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#6a4a8a';                       // aripi
+    ctx.beginPath(); ctx.ellipse(-4, -8+fl*0.5, 13, 6, -0.4, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#ffb020';                       // cioc
+    ctx.beginPath(); ctx.moveTo(w/2.2, -2); ctx.lineTo(w/2.2+9, 2); ctx.lineTo(w/2.2, 6); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(w/5, -6, 5, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.arc(w/5+1, -6, 2.5, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  } else {
+    ctx.fillStyle = theme === 'subteran' ? '#7a5aa0' : '#a05a2c';
+    ctx.beginPath(); ctx.ellipse(x+w/2, y+h/2+wob*0.3, w/2, h/2, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = theme === 'subteran' ? '#5a3a80' : '#6a3a18';
+    ctx.beginPath(); ctx.ellipse(x+10, y+h-4, 8, 6, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x+w-10, y+h-4, 8, 6, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.ellipse(x+12, y+14+wob*0.3, 6, 8, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x+w-12, y+14+wob*0.3, 6, 8, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.arc(x+12, y+17+wob*0.3, 3, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x+w-12, y+17+wob*0.3, 3, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#3a2010'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(x+6, y+6); ctx.lineTo(x+17, y+11); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x+w-6, y+6); ctx.lineTo(x+w-17, y+11); ctx.stroke();
+  }
 }
 
-/* Desenul eroilor 🧒 — Antonia pe unicorn 🦄, Marc în mașinuță de poliție 🚓 */
-function drawKid(cx, footY, cfg, h, dir, anim, jumping) {
-  if (cfg.mount === 'unicorn') return drawUnicornRider(cx, footY, cfg, h, dir, anim, jumping);
-  if (cfg.mount === 'police')  return drawPoliceRider(cx, footY, cfg, h, dir, anim, jumping);
+function drawBoss() {
+  const b = boss;
+  if (b.dead) return;
+  const x = b.x, y = b.y, w = b.w, h = b.h;
+  const flash = b.invT > 0 && Math.floor(time*14)%2===0;
+  const wob = Math.sin(b.anim) * 3;
+  const d = b.vx < 0 ? -1 : 1;
+  ctx.save();
+  ctx.translate(x + w/2, y + h);
+  ctx.scale(d, 1);
+  const body = flash ? '#fff' : '#7a3aa0';
+  const belly = flash ? '#eee' : '#b088cc';
+  // coadă
+  ctx.strokeStyle = body; ctx.lineWidth = 16;
+  ctx.beginPath();
+  ctx.moveTo(-w/2+14, -34);
+  ctx.quadraticCurveTo(-w/2-26, -46, -w/2-20, -76 + wob);
+  ctx.stroke();
+  ctx.fillStyle = flash ? '#fff' : '#e63946';
+  ctx.beginPath(); ctx.moveTo(-w/2-30, -84+wob); ctx.lineTo(-w/2-6, -78+wob); ctx.lineTo(-w/2-20, -62+wob); ctx.closePath(); ctx.fill();
+  // picioare
+  ctx.fillStyle = flash ? '#ddd' : '#5a2a78';
+  ctx.beginPath(); ctx.ellipse(-w/4, -8, 16, 10, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(w/4, -8, 16, 10, 0, 0, Math.PI*2); ctx.fill();
+  // corp
+  ctx.fillStyle = body;
+  ctx.beginPath(); ctx.ellipse(0, -h/2+6+wob*0.4, w/2-6, h/2-12, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = belly;
+  ctx.beginPath(); ctx.ellipse(6, -h/2+14+wob*0.4, w/3.4, h/2-22, 0, 0, Math.PI*2); ctx.fill();
+  // țepi pe spate
+  ctx.fillStyle = flash ? '#fff' : '#e63946';
+  for (let i = 0; i < 4; i++) {
+    const sx = -w/2 + 16 + i*22;
+    ctx.beginPath();
+    ctx.moveTo(sx, -h+18+wob*0.4); ctx.lineTo(sx+10, -h-2+wob*0.4); ctx.lineTo(sx+20, -h+18+wob*0.4);
+    ctx.closePath(); ctx.fill();
+  }
+  // cap
+  ctx.fillStyle = body;
+  ctx.beginPath(); ctx.ellipse(w/2-16, -h+18+wob*0.3, 26, 22, 0, 0, Math.PI*2); ctx.fill();
+  // bot
+  ctx.fillStyle = belly;
+  ctx.beginPath(); ctx.ellipse(w/2+4, -h+26+wob*0.3, 14, 10, 0, 0, Math.PI*2); ctx.fill();
+  // coarne
+  ctx.fillStyle = flash ? '#fff' : '#ffd23f';
+  ctx.beginPath(); ctx.moveTo(w/2-32, -h+2+wob*0.3); ctx.lineTo(w/2-26, -h-16+wob*0.3); ctx.lineTo(w/2-18, -h+2+wob*0.3); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(w/2-12, -h+wob*0.3); ctx.lineTo(w/2-6, -h-14+wob*0.3); ctx.lineTo(w/2+2, -h+wob*0.3); ctx.closePath(); ctx.fill();
+  // ochi supărat
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.ellipse(w/2-12, -h+14+wob*0.3, 7, 8, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#c02020';
+  ctx.beginPath(); ctx.arc(w/2-10, -h+16+wob*0.3, 3.5, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = flash ? '#ccc' : '#3a1a50'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(w/2-24, -h+4+wob*0.3); ctx.lineTo(w/2-4, -h+10+wob*0.3); ctx.stroke();
+  // nări/foc mic
+  ctx.fillStyle = flash ? '#eee' : '#ff8030';
+  ctx.beginPath(); ctx.arc(w/2+16, -h+24+wob*0.3, 3 + Math.abs(Math.sin(time*7))*3, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+function drawBossBar() {
+  if (!boss) return;
+  const bw = 420, bx = W/2 - bw/2, by = 76;
+  ctx.fillStyle = 'rgba(0,0,0,.45)';
+  roundRect(bx-8, by-8, bw+16, 34, 10); ctx.fill();
+  ctx.fillStyle = '#552';
+  roundRect(bx, by, bw, 18, 8); ctx.fill();
+  const frac = Math.max(0, boss.hp / boss.maxHp);
+  ctx.fillStyle = frac > 0.5 ? '#5cb85c' : frac > 0.25 ? '#f0a020' : '#e63946';
+  if (frac > 0) { roundRect(bx, by, bw*frac, 18, 8); ctx.fill(); }
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 16px "Segoe UI", Arial';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('🐉 BALAURUL', W/2, by - 18);
+}
+
+/* ---------- personaje ---------- */
+function drawKid(cx, footY, cfg, h, dir, anim, jumping, wings) {
+  const alt = state !== 'select' && LEVELS[levelIdx] && LEVELS[levelIdx].altMount;
+  if (cfg.mount === 'unicorn') return alt ? drawSkaterRider(cx, footY, cfg, h, dir, anim, jumping, wings)
+                                          : drawUnicornRider(cx, footY, cfg, h, dir, anim, jumping, wings);
+  if (cfg.mount === 'police')  return alt ? drawScooterRider(cx, footY, cfg, h, dir, anim, jumping, wings)
+                                          : drawPoliceRider(cx, footY, cfg, h, dir, anim, jumping, wings);
   drawKidOnFoot(cx, footY, cfg, h, dir, anim, jumping);
 }
 
-function drawUnicornRider(cx, footY, cfg, h, dir, anim, jumping) {
+/* Antonia pe role 🛼 */
+function drawSkaterRider(cx, footY, cfg, h, dir, anim, jumping, wings) {
   const u = h / 16;
-  const g = jumping ? 1 : Math.sin(anim * Math.PI);   // galop
+  const glide = jumping ? 0.6 : Math.sin(anim * Math.PI) * 0.7;
+  ctx.save();
+  ctx.translate(cx, footY);
+  ctx.scale(dir, 1);
+  if (wings) drawMountWings(u, -8*u);
+  // picioare
+  ctx.fillStyle = cfg.pants;
+  ctx.fillRect(-2.4*u + glide*0.5*u, -5.6*u, 2*u, 3.6*u);
+  ctx.fillRect(0.6*u - glide*0.5*u, -5.6*u, 2*u, 3.6*u);
+  // ghete de role roz
+  ctx.fillStyle = '#ff8fb5';
+  ctx.fillRect(-2.7*u + glide*0.5*u, -2.4*u, 2.6*u, 1.7*u);
+  ctx.fillRect(0.3*u - glide*0.5*u, -2.4*u, 2.6*u, 1.7*u);
+  // rotițe
+  ctx.fillStyle = '#8a4aa0';
+  for (const off of [-2.3*u + glide*0.5*u, -1.1*u + glide*0.5*u, 0.7*u - glide*0.5*u, 1.9*u - glide*0.5*u]) {
+    ctx.beginPath(); ctx.arc(off, -0.35*u, 0.42*u, 0, Math.PI*2); ctx.fill();
+  }
+  // corp + braț de echilibru
+  ctx.fillStyle = cfg.shirt;
+  ctx.fillRect(-3*u, -11*u, 6*u, 5.6*u);
+  ctx.fillRect(2.8*u, -10.8*u, 2.2*u, 1.1*u);
+  ctx.fillStyle = cfg.skin;
+  ctx.fillRect(5*u, -10.9*u, 1.1*u, 1.2*u);
+  // cap: păr blond lung + bentiță cu urechi 🐱
+  ctx.fillStyle = cfg.skin;
+  ctx.fillRect(-2.8*u, -17*u, 5.4*u, 6.2*u);
+  ctx.fillStyle = cfg.hairColor;
+  ctx.fillRect(-3.8*u, -16.8*u, 1.3*u, 8.4*u);
+  ctx.fillRect(-3.2*u, -17.4*u, 6*u, 1.7*u);
+  ctx.fillStyle = '#ff8fb5';
+  ctx.fillRect(-3.2*u, -17.8*u, 6*u, 0.8*u);
+  ctx.beginPath(); ctx.moveTo(-2.6*u,-17.6*u); ctx.lineTo(-1.8*u,-19.5*u); ctx.lineTo(-0.8*u,-17.7*u); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(0.7*u,-17.7*u); ctx.lineTo(1.6*u,-19.5*u); ctx.lineTo(2.4*u,-17.6*u); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#ffc2d6';
+  ctx.beginPath(); ctx.moveTo(-2.2*u,-17.8*u); ctx.lineTo(-1.8*u,-18.9*u); ctx.lineTo(-1.2*u,-17.8*u); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(1.1*u,-17.8*u); ctx.lineTo(1.6*u,-18.9*u); ctx.lineTo(2*u,-17.8*u); ctx.closePath(); ctx.fill();
+  // față
+  ctx.fillStyle = '#222';
+  ctx.fillRect(-0.2*u, -15*u, 0.9*u, 1.1*u);
+  ctx.fillRect(1.4*u, -15*u, 0.9*u, 1.1*u);
+  ctx.fillStyle = '#c96b5c';
+  ctx.fillRect(0.4*u, -12.7*u, 1*u, 0.4*u);
+  ctx.restore();
+}
+
+/* Marc pe trotinetă 🛴 */
+function drawScooterRider(cx, footY, cfg, h, dir, anim, jumping, wings) {
+  const u = h / 16;
+  const bob = jumping ? -0.4 : Math.sin(anim*2)*0.2;
+  ctx.save();
+  ctx.translate(cx, footY + bob*u);
+  ctx.scale(dir, 1);
+  if (wings) drawMountWings(u, -6*u);
+  // roți
+  ctx.fillStyle = '#22262a';
+  ctx.beginPath(); ctx.arc(-2.6*u, -0.9*u, 0.95*u, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(3.4*u, -0.9*u, 0.95*u, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#9aa3ab';
+  ctx.beginPath(); ctx.arc(-2.6*u, -0.9*u, 0.4*u, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(3.4*u, -0.9*u, 0.4*u, 0, Math.PI*2); ctx.fill();
+  // placă + ghidon
+  ctx.fillStyle = '#2255cc';
+  ctx.fillRect(-2.8*u, -2*u, 5.6*u, 0.8*u);
+  ctx.strokeStyle = '#3a6fd8'; ctx.lineWidth = 0.6*u;
+  ctx.beginPath(); ctx.moveTo(3.2*u, -1.6*u); ctx.lineTo(4.3*u, -9.6*u); ctx.stroke();
+  ctx.strokeStyle = '#22262a'; ctx.lineWidth = 0.55*u;
+  ctx.beginPath(); ctx.moveTo(3.5*u, -9.8*u); ctx.lineTo(5*u, -9.8*u); ctx.stroke();
+  // picioare pe placă
+  ctx.fillStyle = cfg.pants;
+  ctx.fillRect(-1.6*u, -5.4*u, 1.9*u, 3.4*u);
+  ctx.fillRect(0.4*u, -5.2*u, 1.9*u, 3.2*u);
+  ctx.fillStyle = cfg.shoes;
+  ctx.fillRect(-1.8*u, -2.8*u, 2.4*u, 1*u);
+  ctx.fillRect(0.2*u, -2.6*u, 2.4*u, 0.9*u);
+  // corp + brațe spre ghidon
+  ctx.fillStyle = cfg.shirt;
+  ctx.fillRect(-2*u, -11*u, 4.2*u, 5.8*u);
+  ctx.fillRect(1.6*u, -10.6*u, 2.4*u, 1.1*u);
+  ctx.fillStyle = cfg.skin;
+  ctx.fillRect(3.8*u, -10.7*u, 1.1*u, 1.2*u);
+  // cap cu păr ciufulit + ochelari
+  ctx.fillStyle = cfg.skin;
+  ctx.fillRect(-2.2*u, -16.4*u, 4.8*u, 5.4*u);
+  ctx.fillStyle = cfg.hairColor;
+  ctx.fillRect(-2.5*u, -17*u, 5.4*u, 1.8*u);
+  ctx.fillRect(-2.1*u, -17.7*u, 1.3*u, 1*u);
+  ctx.fillRect(0, -18*u, 1.4*u, 1.4*u);
+  ctx.fillRect(1.7*u, -17.6*u, 1.1*u, 1*u);
+  ctx.fillStyle = '#222';
+  ctx.fillRect(-0.1*u, -14.6*u, 0.8*u, 1*u);
+  ctx.fillRect(1.4*u, -14.6*u, 0.8*u, 1*u);
+  ctx.strokeStyle = '#3a3f44'; ctx.lineWidth = 0.3*u;
+  ctx.beginPath(); ctx.arc(0.3*u, -14.2*u, 1*u, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(1.8*u, -14.2*u, 1*u, 0, Math.PI*2); ctx.stroke();
+  ctx.fillStyle = '#c96b5c';
+  ctx.fillRect(0.5*u, -12.2*u, 0.95*u, 0.38*u);
+  ctx.restore();
+}
+
+function drawMountWings(u, y0) {
+  const fl = Math.sin(time*16) * 5;
+  ctx.fillStyle = 'rgba(255,255,255,.95)';
+  ctx.beginPath(); ctx.ellipse(-2.4*u, y0, 2.6*u, 1.1*u, -0.7 - fl*0.05, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(-3.4*u, y0+0.6*u, 2.2*u, 0.9*u, -0.9 - fl*0.05, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,220,120,.9)';
+  ctx.beginPath(); ctx.ellipse(-2.2*u, y0+1*u, 1.6*u, 0.7*u, -0.7, 0, Math.PI*2); ctx.fill();
+}
+
+function drawUnicornRider(cx, footY, cfg, h, dir, anim, jumping, wings) {
+  const u = h / 16;
+  const g = jumping ? 1 : Math.sin(anim * Math.PI);
   ctx.save();
   ctx.translate(cx, footY);
   ctx.scale(dir, 1);
 
   const rainbow = ['#ff9fd0', '#b28dff', '#7fd4ff'];
-  // coadă curcubeu
   for (let i = 0; i < 3; i++) {
     ctx.strokeStyle = rainbow[i];
     ctx.lineWidth = 1.1*u;
@@ -612,21 +1492,20 @@ function drawUnicornRider(cx, footY, cfg, h, dir, anim, jumping) {
     ctx.quadraticCurveTo(-6.6*u, -7*u + i*0.6*u, -6.1*u, -4.4*u + i*0.7*u);
     ctx.stroke();
   }
-
-  // picioare unicorn (galop)
   const f = jumping ? 1.6 : g, b = jumping ? -1.6 : -g;
   ctx.fillStyle = '#f6f3ee';
   ctx.fillRect(2.2*u + f*0.7*u, -5*u, 1.3*u, 5*u);
   ctx.fillRect(0.8*u - f*0.5*u, -5*u, 1.3*u, 5*u);
   ctx.fillRect(-2.6*u + b*0.5*u, -5*u, 1.3*u, 5*u);
   ctx.fillRect(-4.2*u - b*0.6*u, -5*u, 1.3*u, 5*u);
-  ctx.fillStyle = '#d9b3e6';   // copite
+  ctx.fillStyle = '#d9b3e6';
   ctx.fillRect(2.2*u + f*0.7*u, -1*u, 1.3*u, 1*u);
   ctx.fillRect(0.8*u - f*0.5*u, -1*u, 1.3*u, 1*u);
   ctx.fillRect(-2.6*u + b*0.5*u, -1*u, 1.3*u, 1*u);
   ctx.fillRect(-4.2*u - b*0.6*u, -1*u, 1.3*u, 1*u);
 
-  // corp + gât + cap
+  if (wings) drawMountWings(u, -8*u);
+
   ctx.fillStyle = '#fdfbf7';
   ctx.beginPath(); ctx.ellipse(-0.4*u, -6.6*u, 4.6*u, 2.4*u, 0, 0, Math.PI*2); ctx.fill();
   ctx.beginPath();
@@ -634,15 +1513,14 @@ function drawUnicornRider(cx, footY, cfg, h, dir, anim, jumping) {
   ctx.lineTo(5.6*u, -11.2*u); ctx.lineTo(4*u, -6.2*u);
   ctx.closePath(); ctx.fill();
   ctx.beginPath(); ctx.ellipse(5.2*u, -11.6*u, 1.7*u, 1.2*u, -0.15, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#f6c8d8';   // bot roz
+  ctx.fillStyle = '#f6c8d8';
   ctx.beginPath(); ctx.ellipse(6.3*u, -11.3*u, 0.8*u, 0.7*u, 0, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#333';      // ochi
+  ctx.fillStyle = '#333';
   ctx.beginPath(); ctx.arc(5*u, -11.9*u, 0.32*u, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#ffd23f';   // corn auriu
+  ctx.fillStyle = '#ffd23f';
   ctx.beginPath(); ctx.moveTo(4.5*u, -12.5*u); ctx.lineTo(5.5*u, -12.3*u); ctx.lineTo(5.6*u, -15.2*u); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#fdfbf7';   // ureche
+  ctx.fillStyle = '#fdfbf7';
   ctx.beginPath(); ctx.moveTo(3.9*u, -12.5*u); ctx.lineTo(4.4*u, -13.5*u); ctx.lineTo(4.8*u, -12.4*u); ctx.closePath(); ctx.fill();
-  // coamă curcubeu
   for (let i = 0; i < 3; i++) {
     ctx.strokeStyle = rainbow[i];
     ctx.lineWidth = 0.75*u;
@@ -652,24 +1530,20 @@ function drawUnicornRider(cx, footY, cfg, h, dir, anim, jumping) {
     ctx.stroke();
   }
 
-  // Antonia — picior pe partea vizibilă
   ctx.fillStyle = cfg.pants;
   ctx.fillRect(-0.2*u, -8.2*u, 1.5*u, 3.2*u);
   ctx.fillStyle = cfg.shoes;
   ctx.fillRect(-0.35*u, -5.4*u, 1.8*u, 1.1*u);
-  // corp + braț spre coamă
   ctx.fillStyle = cfg.shirt;
   ctx.fillRect(-2.2*u, -13*u, 3.6*u, 4.9*u);
   ctx.fillRect(0.9*u, -12.6*u, 2.2*u, 1.2*u);
   ctx.fillStyle = cfg.skin;
   ctx.fillRect(2.9*u, -12.8*u, 1.2*u, 1.4*u);
-  // cap + păr blond lung
   ctx.fillStyle = cfg.skin;
   ctx.fillRect(-2.6*u, -18.2*u, 4.6*u, 5.3*u);
   ctx.fillStyle = cfg.hairColor;
-  ctx.fillRect(-3.4*u, -18*u, 1.2*u, 7.2*u);      // păr pe spate
-  ctx.fillRect(-2.9*u, -18.6*u, 5.2*u, 1.6*u);    // calotă
-  // bentiță roz cu urechi de pisică 🐱
+  ctx.fillRect(-3.4*u, -18*u, 1.2*u, 7.2*u);
+  ctx.fillRect(-2.9*u, -18.6*u, 5.2*u, 1.6*u);
   ctx.fillStyle = '#ff8fb5';
   ctx.fillRect(-2.9*u, -19*u, 5.2*u, 0.8*u);
   ctx.beginPath(); ctx.moveTo(-2.4*u, -18.8*u); ctx.lineTo(-1.6*u, -20.7*u); ctx.lineTo(-0.6*u, -18.9*u); ctx.closePath(); ctx.fill();
@@ -677,7 +1551,6 @@ function drawUnicornRider(cx, footY, cfg, h, dir, anim, jumping) {
   ctx.fillStyle = '#ffc2d6';
   ctx.beginPath(); ctx.moveTo(-2*u, -19*u); ctx.lineTo(-1.6*u, -20.1*u); ctx.lineTo(-1*u, -19*u); ctx.closePath(); ctx.fill();
   ctx.beginPath(); ctx.moveTo(1*u, -19*u); ctx.lineTo(1.5*u, -20.1*u); ctx.lineTo(1.9*u, -19*u); ctx.closePath(); ctx.fill();
-  // față
   ctx.fillStyle = '#222';
   ctx.fillRect(-0.4*u, -16.4*u, 0.8*u, 1*u);
   ctx.fillRect(1*u, -16.4*u, 0.8*u, 1*u);
@@ -686,7 +1559,7 @@ function drawUnicornRider(cx, footY, cfg, h, dir, anim, jumping) {
   ctx.restore();
 }
 
-function drawPoliceRider(cx, footY, cfg, h, dir, anim, jumping) {
+function drawPoliceRider(cx, footY, cfg, h, dir, anim, jumping, wings) {
   const u = h / 16;
   const bob = jumping ? -0.4 : Math.sin(anim * 2) * 0.25;
   const flash = Math.floor(time * 5) % 2;
@@ -694,7 +1567,6 @@ function drawPoliceRider(cx, footY, cfg, h, dir, anim, jumping) {
   ctx.translate(cx, footY + bob*u);
   ctx.scale(dir, 1);
 
-  // roți
   for (const wx of [-3.4, 3.4]) {
     ctx.fillStyle = '#22262a';
     ctx.beginPath(); ctx.arc(wx*u, -1.5*u, 1.5*u, 0, Math.PI*2); ctx.fill();
@@ -707,17 +1579,17 @@ function drawPoliceRider(cx, footY, cfg, h, dir, anim, jumping) {
     ctx.stroke();
   }
 
-  // caroserie albastră cu dungă albă
+  if (wings) drawMountWings(u, -4.5*u);
+
   ctx.fillStyle = '#2255cc';
   roundRect(-5.4*u, -5.6*u, 10.8*u, 4.4*u, 0.9*u); ctx.fill();
   ctx.fillStyle = '#fff';
   ctx.fillRect(-5.4*u, -4.3*u, 10.8*u, 1.3*u);
   ctx.fillStyle = '#2255cc';
-  ctx.fillRect(-2.4*u, -4.1*u, 0.5*u, 0.9*u);   // "POLICE" sugerat prin liniuțe
+  ctx.fillRect(-2.4*u, -4.1*u, 0.5*u, 0.9*u);
   ctx.fillRect(-1.5*u, -4.1*u, 0.5*u, 0.9*u);
   ctx.fillRect(-0.6*u, -4.1*u, 0.5*u, 0.9*u);
   ctx.fillRect(0.3*u, -4.1*u, 0.5*u, 0.9*u);
-  // capotă față + parbriz
   ctx.fillStyle = '#1c47ab';
   roundRect(2.6*u, -6.4*u, 2.8*u, 1.2*u, 0.4*u); ctx.fill();
   ctx.fillStyle = '#bfe4ff';
@@ -725,84 +1597,83 @@ function drawPoliceRider(cx, footY, cfg, h, dir, anim, jumping) {
   ctx.moveTo(2.4*u, -5.7*u); ctx.lineTo(3*u, -7.2*u);
   ctx.lineTo(4.1*u, -7.2*u); ctx.lineTo(3.6*u, -5.7*u);
   ctx.closePath(); ctx.fill();
-  // girofar 🚨 (clipește roșu/albastru)
   ctx.fillStyle = '#ddd';
   ctx.fillRect(3.5*u, -7.2*u, 1.6*u, 0.5*u);
   ctx.fillStyle = flash ? '#ff3b30' : '#3b82ff';
   ctx.fillRect(3.5*u, -8*u, 0.8*u, 0.8*u);
   ctx.fillStyle = flash ? '#3b82ff' : '#ff3b30';
   ctx.fillRect(4.3*u, -8*u, 0.8*u, 0.8*u);
-  // far
   ctx.fillStyle = '#ffe27a';
   ctx.fillRect(5*u, -5.4*u, 0.5*u, 0.9*u);
 
-  // Marc la volan 🧒
   ctx.fillStyle = cfg.shirt;
-  ctx.fillRect(-2.3*u, -10*u, 3.6*u, 4.6*u);      // corp
-  ctx.fillRect(0.7*u, -9.6*u, 1.8*u, 1.1*u);      // braț
+  ctx.fillRect(-2.3*u, -10*u, 3.6*u, 4.6*u);
+  ctx.fillRect(0.7*u, -9.6*u, 1.8*u, 1.1*u);
   ctx.fillStyle = cfg.skin;
-  ctx.fillRect(2.2*u, -9.8*u, 1.1*u, 1.3*u);      // mână
-  ctx.strokeStyle = '#22262a'; ctx.lineWidth = 0.35*u;   // volan
+  ctx.fillRect(2.2*u, -9.8*u, 1.1*u, 1.3*u);
+  ctx.strokeStyle = '#22262a'; ctx.lineWidth = 0.35*u;
   ctx.beginPath(); ctx.arc(2.6*u, -8.2*u, 0.95*u, 0, Math.PI*2); ctx.stroke();
-  // cap
   ctx.fillStyle = cfg.skin;
   ctx.fillRect(-2.7*u, -15*u, 4.6*u, 5.2*u);
-  // păr șaten ciufulit
   ctx.fillStyle = cfg.hairColor;
   ctx.fillRect(-3*u, -15.6*u, 5.2*u, 1.8*u);
   ctx.fillRect(-2.6*u, -16.3*u, 1.3*u, 1*u);
   ctx.fillRect(-0.6*u, -16.6*u, 1.4*u, 1.3*u);
   ctx.fillRect(1.2*u, -16.2*u, 1.1*u, 1*u);
   ctx.fillRect(-3*u, -14*u, 0.8*u, 1.4*u);
-  // ochi
   ctx.fillStyle = '#222';
   ctx.fillRect(-0.6*u, -13.3*u, 0.8*u, 1*u);
   ctx.fillRect(0.9*u, -13.3*u, 0.8*u, 1*u);
-  // ochelari rotunzi 👓
   ctx.strokeStyle = '#3a3f44'; ctx.lineWidth = 0.3*u;
   ctx.beginPath(); ctx.arc(-0.2*u, -12.9*u, 0.95*u, 0, Math.PI*2); ctx.stroke();
   ctx.beginPath(); ctx.arc(1.3*u, -12.9*u, 0.95*u, 0, Math.PI*2); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(0.55*u, -13.1*u); ctx.lineTo(0.55*u, -12.9*u);
   ctx.moveTo(-1.15*u, -13*u); ctx.lineTo(-1.9*u, -13.3*u); ctx.stroke();
-  // zâmbet
   ctx.fillStyle = '#c96b5c';
   ctx.fillRect(0.05*u, -11.1*u, 0.95*u, 0.38*u);
   ctx.restore();
 }
 
 function drawKidOnFoot(cx, footY, cfg, h, dir, anim, jumping) {
-  const u = h / 16;             // unitate de desen
+  const u = h / 16;
   const legSwing = jumping ? 0.8 : Math.sin(anim * Math.PI) * 0.9;
   ctx.save();
   ctx.translate(cx, footY);
   ctx.scale(dir, 1);
 
-  // picioare (pantaloni + pantofi)
   ctx.fillStyle = cfg.pants;
-  ctx.fillRect(-2.6*u + legSwing*u, -5*u, 2.2*u, 3.6*u);   // picior spate
-  ctx.fillRect(0.4*u - legSwing*u, -5*u, 2.2*u, 3.6*u);    // picior față
+  ctx.fillRect(-2.6*u + legSwing*u, -5*u, 2.2*u, 3.6*u);
+  ctx.fillRect(0.4*u - legSwing*u, -5*u, 2.2*u, 3.6*u);
   ctx.fillStyle = cfg.shoes;
   ctx.fillRect(-2.8*u + legSwing*u, -1.6*u, 2.8*u, 1.6*u);
   ctx.fillRect(0.2*u - legSwing*u, -1.6*u, 2.8*u, 1.6*u);
 
-  // corp (tricou)
+  const bw = cfg.buff ? 7*u : 6*u;        // piept mai lat pentru cei musculoși 💪
   ctx.fillStyle = cfg.shirt;
-  ctx.fillRect(-3*u, -10*u, 6*u, 5.4*u);
-  // braț
+  ctx.fillRect(-bw/2, -10*u, bw, 5.4*u);
   const armSwing = jumping ? -1.5 : Math.sin(anim * Math.PI + Math.PI) * 0.8;
   ctx.fillStyle = cfg.shirt;
-  ctx.fillRect(2.6*u, -10*u, 1.6*u, 3*u);
+  const aw = cfg.buff ? 2.1*u : 1.6*u;
+  ctx.fillRect(bw/2 - 0.4*u, -10*u, aw, cfg.buff ? 1.6*u : 3*u);
   ctx.fillStyle = cfg.skin;
-  ctx.fillRect(2.6*u, -7.2*u + armSwing*u*0.5, 1.6*u, 1.6*u);
+  if (cfg.buff) {
+    ctx.fillRect(bw/2 - 0.4*u, -8.5*u, aw, 2.6*u);                    // braț musculos
+    if (cfg.tattoo) {
+      ctx.fillStyle = 'rgba(70,58,78,.85)';                            // tatuaj
+      ctx.fillRect(bw/2 - 0.1*u, -8.2*u, 1.4*u, 1.3*u);
+      ctx.fillStyle = cfg.skin;
+    }
+    ctx.fillRect(bw/2 - 0.2*u, -6*u + armSwing*u*0.5, aw - 0.4*u, 1.5*u);  // pumn
+  } else {
+    ctx.fillRect(2.6*u, -7.2*u + armSwing*u*0.5, 1.6*u, 1.6*u);
+  }
 
-  // cap
   ctx.fillStyle = cfg.skin;
   ctx.fillRect(-3.2*u, -16*u, 6.4*u, 6.2*u);
-  // păr
   ctx.fillStyle = cfg.hairColor;
   if (cfg.hair === 'codite') {
     ctx.fillRect(-3.6*u, -16.6*u, 7.2*u, 2.4*u);
-    ctx.fillRect(-4.6*u, -15*u, 1.4*u, 4.5*u);   // codiță
+    ctx.fillRect(-4.6*u, -15*u, 1.4*u, 4.5*u);
     ctx.fillRect(3.2*u, -15*u, 1.4*u, 4.5*u);
     ctx.fillStyle = '#e63985';
     ctx.fillRect(-4.6*u, -11*u, 1.4*u, 0.8*u); ctx.fillRect(3.2*u, -11*u, 1.4*u, 0.8*u);
@@ -816,19 +1687,42 @@ function drawKidOnFoot(cx, footY, cfg, h, dir, anim, jumping) {
     ctx.fillRect(-3.6*u, -16.6*u, 7.2*u, 3.2*u);
     ctx.fillRect(-3.6*u, -14*u, 1.2*u, 3*u);
     ctx.fillRect(2.4*u, -14*u, 1.2*u, 3*u);
-  } else { // scurt
+  } else if (cfg.hair === 'lung') {
+    if (cfg.hairRoots) {                                  // rădăcini mai închise (balayage)
+      ctx.fillStyle = cfg.hairRoots;
+      ctx.fillRect(-3.6*u, -16.6*u, 7.2*u, 1.3*u);
+      ctx.fillStyle = cfg.hairColor;
+      ctx.fillRect(-3.6*u, -15.3*u, 7.2*u, 0.9*u);
+    } else {
+      ctx.fillRect(-3.6*u, -16.6*u, 7.2*u, 2.2*u);
+    }
+    ctx.fillRect(-4.3*u, -16*u, 1.3*u, 8*u);
+    ctx.fillRect(-3.6*u, -15*u, 0.9*u, 3*u);
+  } else if (cfg.hair === 'ridicat') {                    // păr scurt pieptănat în sus
+    ctx.fillRect(-3.4*u, -16.8*u, 6.8*u, 1.6*u);
+    ctx.fillRect(0.6*u, -17.9*u, 2.6*u, 1.5*u);           // moț ridicat în față
+    ctx.fillRect(-3.4*u, -15.4*u, 0.8*u, 1*u);
+  } else {
     ctx.fillRect(-3.6*u, -16.6*u, 7.2*u, 2.2*u);
     ctx.fillRect(-3.6*u, -15*u, 1*u, 1.6*u);
   }
 
-  // față (privind în direcția de mers)
   ctx.fillStyle = '#222';
-  ctx.fillRect(0.4*u, -13.6*u, 1*u, 1.3*u);     // ochi
+  ctx.fillRect(0.4*u, -13.6*u, 1*u, 1.3*u);
   ctx.fillRect(2.2*u, -13.6*u, 1*u, 1.3*u);
+  if (cfg.glasses) {
+    ctx.strokeStyle = '#3a3f44'; ctx.lineWidth = 0.3*u;
+    ctx.beginPath(); ctx.arc(0.9*u, -13*u, 1.1*u, 0, Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(2.7*u, -13*u, 1.1*u, 0, Math.PI*2); ctx.stroke();
+  }
+  if (cfg.beard) {                                        // barbă scurtă
+    ctx.fillStyle = '#8a6d42';
+    ctx.fillRect(-3.2*u, -11.3*u, 6.4*u, 1.5*u);
+  }
   ctx.fillStyle = '#d8886a';
-  ctx.fillRect(1.4*u, -12*u, 0.8*u, 0.8*u);     // nas
-  ctx.fillStyle = '#b84a3a';
-  ctx.fillRect(0.8*u, -10.9*u, 1.8*u, 0.6*u);   // zâmbet
+  ctx.fillRect(1.4*u, -12*u, 0.8*u, 0.8*u);
+  ctx.fillStyle = '#c96b5c';
+  ctx.fillRect(0.9*u, -10.9*u, 1.6*u, 0.55*u);
 
   ctx.restore();
 }
@@ -852,12 +1746,12 @@ function drawFlag() {
 function drawClouds() {
   ctx.fillStyle = 'rgba(255,255,255,.9)';
   for (let i = 0; i < 6; i++) {
-    const cx = ((i * 420 + 100 - camX*0.3) % (W + 400)) - 200;
+    const cx2 = ((i * 420 + 100 - camX*0.3) % (W + 400)) - 200;
     const cy = 60 + (i%3)*55;
     ctx.beginPath();
-    ctx.arc(cx, cy, 26, 0, Math.PI*2);
-    ctx.arc(cx+30, cy-8, 32, 0, Math.PI*2);
-    ctx.arc(cx+62, cy, 26, 0, Math.PI*2);
+    ctx.arc(cx2, cy, 26, 0, Math.PI*2);
+    ctx.arc(cx2+30, cy-8, 32, 0, Math.PI*2);
+    ctx.arc(cx2+62, cy, 26, 0, Math.PI*2);
     ctx.fill();
   }
 }
@@ -875,14 +1769,20 @@ function drawHUD() {
   ctx.fillStyle = 'rgba(0,0,0,.35)';
   roundRect(12, 12, 1000, 52, 12); ctx.fill();
   ctx.fillStyle = '#fff';
-  ctx.font = 'bold 26px "Segoe UI", Arial';
+  ctx.font = 'bold 24px "Segoe UI", Arial';
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  ctx.fillText('⭐ ' + score, 32, 39);
-  ctx.fillText('❤️'.repeat(Math.max(0,lives)), 200, 39);
+  ctx.fillText('⭐ ' + score, 28, 39);
+  ctx.fillText('❤️'.repeat(Math.max(0, lives)), 160, 39);
   ctx.textAlign = 'center';
-  ctx.fillText(LEVEL_NAMES[Math.min(levelIdx, LEVEL_NAMES.length-1)], W/2, 39);
+  ctx.fillText(LEVELS[Math.min(levelIdx, LEVELS.length-1)].name, W/2 + 20, 39);
   ctx.textAlign = 'right';
-  ctx.fillText((CHARACTERS[charIdx].emoji || '🧒') + ' ' + CHARACTERS[charIdx].name, W-32, 39);
+  let px = W - 28;
+  ctx.fillText((CHARACTERS[charIdx].emoji || '🧒') + ' ' + CHARACTERS[charIdx].name, px, 39);
+  px -= 180;
+  if (player && player.starT > 0) { ctx.fillText('⭐' + Math.ceil(player.starT), px, 39); px -= 70; }
+  if (player && player.wingsT > 0) { ctx.fillText('🪽' + Math.ceil(player.wingsT), px, 39); px -= 70; }
+  if (player && player.fire) { ctx.fillText('🔥', px, 39); }
+  btnFEl.style.display = (document.body.classList.contains('touch') && player && player.fire && state === 'play') ? 'flex' : 'none';
 }
 
 function drawOverlay(big, small) {
@@ -890,24 +1790,57 @@ function drawOverlay(big, small) {
   ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = '#fff';
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = 'bold 56px "Segoe UI", Arial';
+  ctx.font = 'bold 52px "Segoe UI", Arial';
   ctx.fillText(big, W/2, H/2 - 30);
   if (small) { ctx.font = '32px "Segoe UI", Arial'; ctx.fillText(small, W/2, H/2 + 40); }
+}
+
+function drawHelperSelect() {
+  ctx.fillStyle = 'rgba(10,5,20,.72)';
+  ctx.fillRect(0, 0, W, H);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = 'bold 44px "Segoe UI", Arial';
+  ctx.fillStyle = '#ffd700';
+  ctx.fillText('🐉 Balaurul te așteaptă!', W/2, 80);
+  ctx.font = '30px "Segoe UI", Arial';
+  ctx.fillStyle = '#fff';
+  ctx.fillText('Cine vine să te ajute? 🤝', W/2, 140);
+
+  for (let i = 0; i < 2; i++) {
+    const cfg = HELPERS[i];
+    const bx = i === 0 ? W/4 : 3*W/4;
+    const sel = selHelperHover === i;
+    ctx.fillStyle = sel ? 'rgba(255,255,255,.95)' : 'rgba(255,255,255,.5)';
+    roundRect(bx - 150, 180, 300, 300, 24); ctx.fill();
+    if (sel) {
+      ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 6;
+      roundRect(bx - 150, 180, 300, 300, 24); ctx.stroke();
+    }
+    const bob = sel ? Math.sin(time*5)*5 : 0;
+    drawKidOnFoot(bx, 440 + bob, cfg, 150 * cfg.scale / 1.25, 1, sel ? time*6 : 0, false);
+    ctx.fillStyle = '#333';
+    ctx.font = 'bold 32px "Segoe UI", Arial';
+    ctx.fillText(cfg.emoji + ' ' + cfg.name, bx, 225);
+  }
+  ctx.fillStyle = '#fff';
+  ctx.font = '24px "Segoe UI", Arial';
+  ctx.fillText('⬅➡ alege  •  Enter / atinge cardul', W/2, 530);
 }
 
 function drawWin() {
   ctx.fillStyle = 'rgba(20,10,60,.75)';
   ctx.fillRect(0, 0, W, H);
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = 'bold 64px "Segoe UI", Arial';
+  ctx.font = 'bold 60px "Segoe UI", Arial';
   ctx.fillStyle = '#ffd700';
-  ctx.fillText('🏆 AI CÂȘTIGAT! 🏆', W/2, H/2 - 80);
-  ctx.font = 'bold 40px "Segoe UI", Arial';
+  ctx.fillText('🏆 AI CÂȘTIGAT! 🏆', W/2, H/2 - 100);
+  ctx.font = 'bold 38px "Segoe UI", Arial';
   ctx.fillStyle = '#fff';
-  ctx.fillText('Scor final: ⭐ ' + score, W/2, H/2 + 10);
+  ctx.fillText('Scor final: ⭐ ' + score, W/2, H/2 - 20);
+  const rec = loadRecords()[CHARACTERS[charIdx].name] || 0;
   ctx.font = '28px "Segoe UI", Arial';
-  if (stateTimer > 1) ctx.fillText('Apasă Enter (sau atinge ecranul) pentru a juca din nou', W/2, H/2 + 90);
-  // confetti
+  ctx.fillText(score >= rec ? '🎉 RECORD NOU! 🎉' : '🏆 Recordul tău: ' + rec, W/2, H/2 + 35);
+  if (stateTimer > 1) ctx.fillText('Apasă Enter (sau atinge ecranul) pentru a juca din nou', W/2, H/2 + 95);
   for (let i = 0; i < 40; i++) {
     const x = (i * 137 + time * (60 + i*7)) % W;
     const y = (i * 211 + time * (120 + i*13)) % H;
@@ -917,7 +1850,6 @@ function drawWin() {
 }
 
 function drawSelect() {
-  drawClouds(); drawHills();
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.font = 'bold 58px "Segoe UI", Arial';
   ctx.fillStyle = '#fff';
@@ -925,28 +1857,32 @@ function drawSelect() {
   ctx.strokeText('🍄 Super Aventura 🍄', W/2, 90);
   ctx.fillText('🍄 Super Aventura 🍄', W/2, 90);
   ctx.font = '30px "Segoe UI", Arial';
-  ctx.fillText('Cine se joacă? 😊', W/2, 160);
+  ctx.fillText('Cine se joacă? 😊', W/2, 155);
 
+  const rec = loadRecords();
   for (let i = 0; i < 2; i++) {
     const cfg = CHARACTERS[i];
     const bx = i === 0 ? W/4 : 3*W/4;
     const sel = selHover === i;
     ctx.fillStyle = sel ? 'rgba(255,255,255,.95)' : 'rgba(255,255,255,.55)';
-    roundRect(bx - 160, 200, 320, 280, 24); ctx.fill();
+    roundRect(bx - 160, 190, 320, 300, 24); ctx.fill();
     if (sel) {
       ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 6;
-      roundRect(bx - 160, 200, 320, 280, 24); ctx.stroke();
+      roundRect(bx - 160, 190, 320, 300, 24); ctx.stroke();
     }
     const bob = sel ? Math.sin(time*5)*5 : 0;
-    drawKid(bx, 420 + bob, cfg, 130 * cfg.scale, 1, sel ? time*6 : 0, false);
+    drawKid(bx, 425 + bob, cfg, 125 * cfg.scale, 1, sel ? time*6 : 0, false, false);
     ctx.fillStyle = '#333';
     ctx.font = 'bold 30px "Segoe UI", Arial';
-    ctx.fillText(cfg.name, bx, 250);
+    ctx.fillText(cfg.name, bx, 235);
+    ctx.font = 'bold 22px "Segoe UI", Arial';
+    ctx.fillStyle = '#8a6a10';
+    ctx.fillText('🏆 Record: ' + (rec[cfg.name] || 0), bx, 465);
   }
   ctx.fillStyle = '#fff';
   ctx.font = '24px "Segoe UI", Arial';
   ctx.fillText('⬅➡ alege  •  Enter / atinge ca să pornești', W/2, 530);
-  ctx.fillText('🕹️ Săgeți sau A/D = mers  •  Spațiu / ⬆ = săritură', W/2, 30);
+  ctx.fillText('🕹️ Săgeți sau A/D = mers  •  Spațiu / ⬆ = săritură / zbor / înot', W/2, 30);
 }
 
 function roundRect(x, y, w, h, r) {
