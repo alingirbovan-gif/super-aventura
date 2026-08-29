@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1a1a2e">
+<link rel="manifest" href='data:application/manifest+json,{"name":"Super Aventura","short_name":"Super Aventura","display":"fullscreen","orientation":"landscape","background_color":"%231a1a2e","theme_color":"%231a1a2e","start_url":"."}'>
 <title>Super Aventura</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
@@ -21,9 +26,11 @@
   #btnJ { right:4vw; background:rgba(255,80,80,.25); border-color:rgba(255,120,120,.6); }
   #btnF { right:calc(4vw + 19vmin); background:rgba(255,160,40,.3); border-color:rgba(255,190,90,.7); }
   body.touch .tbtn { display:flex; }
-  #btnM { position:fixed; top:2vh; right:2vw; width:44px; height:44px; border-radius:50%;
+  #btnM, #btnFS { position:fixed; top:2vh; width:44px; height:44px; border-radius:50%;
     background:rgba(0,0,0,.35); color:#fff; font-size:22px; display:flex; align-items:center;
     justify-content:center; user-select:none; -webkit-user-select:none; z-index:11; cursor:pointer; }
+  #btnM { right:2vw; }
+  #btnFS { right:calc(2vw + 54px); }
 </style>
 </head>
 <body>
@@ -33,6 +40,7 @@
 <div class="tbtn" id="btnJ">⬆</div>
 <div class="tbtn" id="btnF">🔥</div>
 <div id="btnM">🔊</div>
+<div id="btnFS">⛶</div>
 
 <script>
 'use strict';
@@ -326,6 +334,29 @@ btnM.addEventListener('pointerdown', e => {
   musicMuted = !musicMuted;
   btnM.textContent = musicMuted ? '🔇' : '🔊';
   try { localStorage.setItem('sa_mute', musicMuted ? '1' : '0'); } catch(e2){}
+});
+
+/* ================= FULLSCREEN ================= */
+function toggleFullscreen() {
+  const d = document, el = d.documentElement;
+  const inFs = d.fullscreenElement || d.webkitFullscreenElement;
+  try {
+    if (!inFs) {
+      const p = el.requestFullscreen ? el.requestFullscreen()
+              : el.webkitRequestFullscreen ? el.webkitRequestFullscreen() : null;
+      if (p && p.catch) p.catch(()=>{});
+      try { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(()=>{}); } catch(e){}
+    } else {
+      const p = d.exitFullscreen ? d.exitFullscreen()
+              : d.webkitExitFullscreen ? d.webkitExitFullscreen() : null;
+      if (p && p.catch) p.catch(()=>{});
+    }
+  } catch(e){}
+}
+const btnFSEl = document.getElementById('btnFS');
+btnFSEl.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); toggleFullscreen(); });
+addEventListener('fullscreenchange', () => {
+  btnFSEl.textContent = document.fullscreenElement ? '🡴' : '⛶';
 });
 
 /* ================= RECORDURI ================= */
