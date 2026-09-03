@@ -123,9 +123,22 @@ const ADULTS = [
     shirt: '#26262e', pants: '#3a3a44', shoes: '#1a1a1e', scale: 0.98, vmul: 1.22,
   },
 ];
-const CHARACTERS = [...KIDS, ...ADULTS];   // toți 4 sunt jucabili! 🎮
-function helperList() {                    // copiii sunt ajutați de părinți — și invers 😄
-  return charIdx < 2 ? ADULTS : KIDS;
+const GRANDS = [
+  {
+    name: 'Toty', emoji: '🚙', mount: 'suv', attack: 'ram',   // lovește cu botul mașinii + claxon 📯
+    hair: 'scurt', hairColor: '#9aa0a6', skin: '#d89a6a',     // păr grizonat, bronzat bine
+    shirt: '#f6f6f2', pants: '#b0b4ba', shoes: '#5a5f66', scale: 0.95, vmul: 1.12,
+  },
+  {
+    name: 'Mari', emoji: '🌻', attack: 'throw', proj: 'sunflower',
+    hair: 'breton', hairColor: '#c06038', skin: '#e8a878', glasses: true,   // păr arămiu, ochelari
+    flower: true, sunflower: true,                             // tricoul cu floare + floarea-soarelui în mână
+    shirt: '#f6f2ea', pants: '#bfe0ea', shoes: '#d8d2c8', scale: 0.96, vmul: 1.16,
+  },
+];
+const CHARACTERS = [...KIDS, ...ADULTS, ...GRANDS];   // toți 6 sunt jucabili! 🎮
+function helperList() {                    // copiii sunt ajutați de cei mari — și invers 😄
+  return charIdx < 2 ? [...ADULTS, ...GRANDS] : KIDS;
 }
 
 /* ================= CONSTANTE ================= */
@@ -588,7 +601,7 @@ document.getElementById('pinActReset').addEventListener('pointerdown', e => {
 });
 function activateTestGodMode() {
   godMode = true;
-  if (charIdx < 0 || charIdx > 3) charIdx = 0;
+  if (charIdx < 0 || charIdx > 5) charIdx = 0;
   lives = LIVES_START;
   levelIdx = LEVELS.length - 1;
   loadLevel(levelIdx);
@@ -690,10 +703,11 @@ cv.addEventListener('pointerdown', e => {
   const r = cv.getBoundingClientRect();
   const x = (e.clientX - r.left) * (W / r.width);
   if (state === 'select') {
-    selHover = Math.min(3, Math.floor(x / (W/4)));
+    selHover = Math.min(5, Math.floor(x / (W/6)));
     chooseChar(selHover);
   } else if (state === 'helper') {
-    selHelperHover = x < W/2 ? 0 : 1;
+    const n = helperList().length;
+    selHelperHover = Math.min(n - 1, Math.floor(x / (W/n)));
     chooseHelper(selHelperHover);
   } else if (state !== 'play') {
     handleMenuKey('Enter');
@@ -704,19 +718,16 @@ function handleMenuKey(key) {
   audio();
   const low = typeof key === 'string' ? key.toLowerCase() : key;
   if (state === 'select') {
-    if (key === 'ArrowLeft' || low === 'a') selHover = (selHover + 3) % 4;
-    if (key === 'ArrowRight' || low === 'd') selHover = (selHover + 1) % 4;
+    if (key === 'ArrowLeft' || low === 'a') selHover = (selHover + 5) % 6;
+    if (key === 'ArrowRight' || low === 'd') selHover = (selHover + 1) % 6;
     if (key === 'Enter' || key === ' ') chooseChar(selHover);
-    if (key === '1') chooseChar(0);
-    if (key === '2') chooseChar(1);
-    if (key === '3') chooseChar(2);
-    if (key === '4') chooseChar(3);
+    for (let k = 1; k <= 6; k++) if (key === String(k)) chooseChar(k - 1);
   } else if (state === 'helper') {
-    if (key === 'ArrowLeft' || low === 'a') selHelperHover = 0;
-    if (key === 'ArrowRight' || low === 'd') selHelperHover = 1;
-    if (key === 'Enter' || key === ' ') chooseHelper(selHelperHover);
-    if (key === '1') chooseHelper(0);
-    if (key === '2') chooseHelper(1);
+    const n = helperList().length;
+    if (key === 'ArrowLeft' || low === 'a') selHelperHover = (selHelperHover + n - 1) % n;
+    if (key === 'ArrowRight' || low === 'd') selHelperHover = (selHelperHover + 1) % n;
+    if (key === 'Enter' || key === ' ') chooseHelper(Math.min(selHelperHover, n - 1));
+    for (let k = 1; k <= n; k++) if (key === String(k)) chooseHelper(k - 1);
   } else if (state === 'win' && (key === 'Enter' || key === ' ')) {
     if (stateTimer > 1) { saveRecord(); state = 'select'; stopMusic(); score = 0; lives = LIVES_START; levelIdx = 0; }
   }
@@ -925,7 +936,7 @@ function hitBlockAbove(r, b) {
       sfx.power(); sfx.heart();
       for (let i=0;i<10;i++) particles.push({ x:c*TILE+TILE/2, y:r*TILE+TILE/2, vx:(Math.random()-0.5)*350,
         vy:-150-Math.random()*250, t:0.7, col: ['#ffd700','#ff8fb5','#7fd4ff'][i%3] });
-      const eggsFor = [['barbie','iepuras'], ['pompieri','masina-spalat'], ['gantera'], ['cafea']][charIdx] || ['iepuras'];
+      const eggsFor = [['barbie','iepuras'], ['pompieri','masina-spalat'], ['gantera'], ['cafea'], ['crap'], ['bani']][charIdx] || ['iepuras'];
       currentEgg = eggsFor[eggIdx % eggsFor.length];
       eggIdx++;
       state = 'easteregg'; stateTimer = 0;
@@ -1232,7 +1243,7 @@ function updateHelper(dt) {
   h.cool -= dt;
   if (h.punchT > 0) h.punchT -= dt;
   const fightMode = b && !b.dead && Math.abs((b.x + b.w/2) - (player.x + player.w/2)) < 750;
-  const meleeRange = h.cfg.attack === 'punch';
+  const meleeRange = h.cfg.attack === 'punch' || h.cfg.attack === 'ram';
   const nearEnemy = nearestLiveEnemy(h);
   // în luptă cu boss-ul rămâne concentrat pe el, dar dacă un inamic (ex: liliac) trece chiar pe lângă el, îl curăță
   const engageRange = meleeRange ? 90 : 180;
@@ -1261,6 +1272,7 @@ function updateHelper(dt) {
         h.punchT = 0.5; h.cool = 1.3;
         engageEnemy.dead = true; engageEnemy.deadT = 0.4;
         score += 25; sfx.stomp();
+        if (h.cfg.attack === 'ram') beep(520, 0.12, 'square', 0.14);
         for (let i=0;i<5;i++) particles.push({ x:engageEnemy.x+engageEnemy.w/2, y:engageEnemy.y+engageEnemy.h/2, vx:(Math.random()-0.5)*250, vy:-Math.random()*200, t:0.4, col:'#a05a2c' });
       }
     } else if (edist < 280 && edist > 30 && h.cool <= 0) {
@@ -1274,11 +1286,12 @@ function updateHelper(dt) {
     if (!h.onGround) h.vx += Math.sign(bdx) * 1100 * dt;
     h.dir = Math.sign(bdx) || h.dir;
     let attacked = false;
-    if (meleeRange) {                                  // Alin: pumn corp la corp 👊
+    if (meleeRange) {                                  // Alin: pumn 👊 / Toty: botul mașinii + claxon 📯
       if (dist < 74 && h.cool <= 0 && b.invT <= 0) {
         h.punchT = 0.5; h.cool = 1.1; attacked = true;
         bossDamage(b.kind === 'balaur' ? 1 : 0.5);      // Balaurul: 50% din damage-ul jucătorului; mini-boși: 25%
         sfx.stomp();
+        if (h.cfg.attack === 'ram') { beep(520, 0.12, 'square', 0.14); setTimeout(()=>beep(520, 0.14, 'square', 0.14), 160); }
         for (let i=0;i<5;i++) particles.push({ x:b.x+b.w/2-bdx*0.3, y:b.y+b.h*0.4, vx:h.dir*250+(Math.random()-0.5)*120, vy:-Math.random()*180, t:0.3, col:'#eec096' });
       }
     } else if (dist < 340 && h.cool <= 0 && b.invT <= 0) {   // aruncă proiectilul lui de la distanță 👓⭐🍩
@@ -1790,6 +1803,14 @@ function drawThrownGlasses(gl) {           // proiectilul ajutorului: ochelari �
       ctx.lineTo(Math.cos(a)*rr, Math.sin(a)*rr);
     }
     ctx.closePath(); ctx.fill();
+  } else if (gl.kindP === 'sunflower') {
+    ctx.fillStyle = '#ffd23f';
+    for (let i = 0; i < 8; i++) {
+      const a = i * Math.PI/4;
+      ctx.beginPath(); ctx.ellipse(Math.cos(a)*8, Math.sin(a)*8, 5, 2.6, a, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.fillStyle = '#6a4a1a';
+    ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI*2); ctx.fill();
   } else if (gl.kindP === 'donut') {
     ctx.fillStyle = '#d9a066';
     ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI*2); ctx.fill();
@@ -2007,12 +2028,87 @@ function drawCoffeeMachine(x, y, scale) {    // espressor de cafea ☕
   ctx.restore();
 }
 
+function drawCrap(x, y, scale) {          // crapul-trofeu al lui Toty 🎣
+  ctx.save();
+  ctx.translate(x, y - 10 + Math.sin(time*3)*4);
+  ctx.scale(scale, scale);
+  ctx.rotate(Math.sin(time*2)*0.06);
+  // fir + cârlig deasupra
+  ctx.strokeStyle = '#c8ccd2'; ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.moveTo(46, -70); ctx.lineTo(46, -20); ctx.stroke();
+  ctx.beginPath(); ctx.arc(43, -15, 5, -0.3, Math.PI*0.9); ctx.stroke();
+  // corp gras auriu de crap
+  ctx.fillStyle = '#c89a4a';
+  ctx.beginPath(); ctx.ellipse(0, 0, 44, 24, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#e8c070';
+  ctx.beginPath(); ctx.ellipse(2, 7, 36, 13, 0, 0, Math.PI*2); ctx.fill();
+  // coadă + aripioară dorsală
+  ctx.fillStyle = '#a87c34';
+  ctx.beginPath(); ctx.moveTo(-40, 0); ctx.lineTo(-58, -16 + Math.sin(time*6)*4); ctx.lineTo(-58, 16 + Math.sin(time*6)*4); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-20, -20); ctx.quadraticCurveTo(0, -38, 18, -20); ctx.closePath(); ctx.fill();
+  // solzi
+  ctx.strokeStyle = 'rgba(120,90,40,.5)'; ctx.lineWidth = 2;
+  for (let r = 0; r < 3; r++)
+    for (let c = 0; c < 4; c++) {
+      ctx.beginPath(); ctx.arc(-18 + c*12 + (r%2)*6, -8 + r*8, 5, 0.2*Math.PI, 0.8*Math.PI); ctx.stroke();
+    }
+  // cap cu buze mari de crap + mustăți
+  ctx.fillStyle = '#b8883c';
+  ctx.beginPath(); ctx.ellipse(32, 0, 14, 18, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#d8a860';
+  ctx.beginPath(); ctx.ellipse(42, 5, 6, 8, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(32, -6, 6, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#222';
+  ctx.beginPath(); ctx.arc(33, -5, 3, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#8a6a2c'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(44, 9); ctx.quadraticCurveTo(50, 15, 48, 21); ctx.stroke();
+  ctx.restore();
+}
+
+function drawMoneyStack(x, y, scale) {    // teancul de bani al lui Mari 💵
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+  // bancnote care zboară
+  for (let i = 0; i < 4; i++) {
+    const t = (time*0.6 + i*0.37) % 1.5;
+    ctx.save();
+    ctx.translate(-40 + i*28, -34 - t*46);
+    ctx.rotate(Math.sin(time*3 + i)*0.5);
+    ctx.globalAlpha = Math.max(0, 1 - t/1.5);
+    ctx.fillStyle = '#7ac87a';
+    ctx.fillRect(-13, -7, 26, 14);
+    ctx.strokeStyle = '#3a8a3a'; ctx.lineWidth = 1.6;
+    ctx.strokeRect(-13, -7, 26, 14);
+    ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI*2); ctx.stroke();
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+  // teancuri legate cu bandă
+  for (let s = 0; s < 3; s++) {
+    const sx = -36 + s*36, sh = 18 + (s%2)*10;
+    for (let l = 0; l < sh; l += 4) {
+      ctx.fillStyle = l % 8 ? '#8ad48a' : '#7ac87a';
+      ctx.fillRect(sx - 20, -l - 14, 40, 4);
+    }
+    ctx.fillStyle = '#e8e2c8';
+    ctx.fillRect(sx - 6, -sh - 14, 12, sh + 6);
+    ctx.fillStyle = '#3a8a3a';
+    ctx.font = 'bold 9px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('100', sx, -sh/2 - 11);
+  }
+  ctx.restore();
+}
+
 function drawEggItem(kind, x, y, scale) {
   if (kind === 'barbie') drawBarbie(x, y, scale);
   else if (kind === 'pompieri') drawToyFiretruck(x, y, scale);
   else if (kind === 'gantera') drawDumbbell(x, y, scale);
   else if (kind === 'cafea') drawCoffeeMachine(x, y, scale * 1.2);
   else if (kind === 'masina-spalat') drawWashingMachine(x, y, scale);
+  else if (kind === 'crap') drawCrap(x, y, scale);
+  else if (kind === 'bani') drawMoneyStack(x, y, scale);
   else drawRabbit(x, y, scale);
 }
 function eggMessage(kind) {
@@ -2022,6 +2118,8 @@ function eggMessage(kind) {
   if (kind === 'gantera') return ['Felicitări, ' + nume + '! 🎉', 'Ai găsit o ganteră nouă! 🏋️💪'];
   if (kind === 'cafea') return ['Felicitări, ' + nume + '! 🎉', 'Ai găsit un espressor de cafea! ☕😍'];
   if (kind === 'masina-spalat') return ['Felicitări, ' + nume + '! 🎉', 'Ai găsit o mașină de spălat! 🧺'];
+  if (kind === 'crap') return ['Felicitări, ' + nume + '! 🎉', 'Ai prins un crap uriaș! 🎣🐟'];
+  if (kind === 'bani') return ['Felicitări, ' + nume + '! 🎉', 'Ai găsit un teanc de bani! 💰'];
   return ['Felicitări, ' + nume + '! 🎉', 'Ai salvat un iepuraș! 🐰'];
 }
 function drawEasterEgg() {
@@ -2080,7 +2178,7 @@ function drawFinishMove(duration) {
         }
       }
     }
-  } else {                                          // Deni: ochelarii uriași cad pe boss 👓
+  } else if (charIdx === 3) {                       // Deni: ochelarii uriași cad pe boss 👓
     if (frac < 0.85) {
       ctx.save();
       ctx.translate(bx, by - 120 + Math.min(1, frac*2.2) * 120);
@@ -2089,6 +2187,41 @@ function drawFinishMove(duration) {
       ctx.beginPath(); ctx.arc(-26, 0, 25, 0, Math.PI*2); ctx.stroke();
       ctx.beginPath(); ctx.arc(26, 0, 25, 0, Math.PI*2); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(-4, 0); ctx.lineTo(4, 0); ctx.stroke();
+      ctx.restore();
+    }
+  } else if (charIdx === 4) {                       // Toty: SUV-ul trece peste boss 🚙📯
+    if (frac < 0.85) {
+      const carX = bx - 260 + Math.abs(Math.sin(time*3)) * 260;
+      ctx.save();
+      ctx.translate(carX, by + 20);
+      ctx.fillStyle = '#e8742a';
+      roundRect(-70, -50, 140, 42, 12); ctx.fill();
+      ctx.fillStyle = '#26282c';
+      roundRect(-70, -16, 140, 10, 5); ctx.fill();
+      ctx.fillStyle = '#bfe4ff';
+      ctx.beginPath(); ctx.moveTo(18,-50); ctx.lineTo(28,-68); ctx.lineTo(52,-68); ctx.lineTo(44,-50); ctx.closePath(); ctx.fill();
+      for (const wx of [-42, 42]) {
+        ctx.fillStyle = '#1c1f24'; ctx.beginPath(); ctx.arc(wx, -4, 16, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#8a9098'; ctx.beginPath(); ctx.arc(wx, -4, 6, 0, Math.PI*2); ctx.fill();
+      }
+      ctx.restore();
+      if (Math.abs(Math.sin(time*3)) > 0.9) {
+        ctx.fillStyle = '#ffd700';
+        for (let i = 0; i < 5; i++) { const a = time*10 + i*1.26; ctx.fillRect(bx + Math.cos(a)*50 - 4, by + Math.sin(a)*50 - 4, 9, 9); }
+      }
+    }
+  } else {                                          // Mari: floarea-soarelui uriașă se învârte peste boss 🌻
+    if (frac < 0.85) {
+      ctx.save();
+      ctx.translate(bx, by - 120 + Math.min(1, frac*2.2) * 120);
+      ctx.rotate(time * 4);
+      ctx.fillStyle = '#ffd23f';
+      for (let i = 0; i < 10; i++) {
+        const a = i * Math.PI/5;
+        ctx.beginPath(); ctx.ellipse(Math.cos(a)*38, Math.sin(a)*38, 22, 10, a, 0, Math.PI*2); ctx.fill();
+      }
+      ctx.fillStyle = '#6a4a1a';
+      ctx.beginPath(); ctx.arc(0, 0, 24, 0, Math.PI*2); ctx.fill();
       ctx.restore();
     }
   }
@@ -2577,6 +2710,7 @@ function drawBossBar() {
 /* ---------- personaje ---------- */
 function drawKid(cx, footY, cfg, h, dir, anim, jumping, wings) {
   const alt = state !== 'select' && LEVELS[levelIdx] && LEVELS[levelIdx].altMount;
+  if (cfg.mount === 'suv') return drawSuvRider(cx, footY, cfg, h, dir, anim, jumping, wings);
   if (cfg.mount === 'unicorn') {
     if (alt === 'street') return drawBunnyRider(cx, footY, cfg, h, dir, anim, jumping, wings);
     return alt ? drawSkaterRider(cx, footY, cfg, h, dir, anim, jumping, wings)
@@ -2588,6 +2722,73 @@ function drawKid(cx, footY, cfg, h, dir, anim, jumping, wings) {
                : drawPoliceRider(cx, footY, cfg, h, dir, anim, jumping, wings);
   }
   drawKidOnFoot(cx, footY, cfg, h, dir, anim, jumping, false, wings);
+}
+
+/* Toty în SUV-ul lui portocaliu 🚙 (gen 2008) */
+function drawSuvRider(cx, footY, cfg, h, dir, anim, jumping, wings) {
+  const u = h / 16;
+  const bob = jumping ? -0.4 : Math.sin(anim * 2) * 0.25;
+  ctx.save();
+  ctx.translate(cx, footY + bob*u);
+  ctx.scale(dir, 1);
+  // roți mari de SUV
+  for (const wx of [-3.5, 3.5]) {
+    ctx.fillStyle = '#1c1f24';
+    ctx.beginPath(); ctx.arc(wx*u, -1.7*u, 1.7*u, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#8a9098';
+    ctx.beginPath(); ctx.arc(wx*u, -1.7*u, 0.7*u, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#556'; ctx.lineWidth = 0.25*u;
+    ctx.beginPath();
+    ctx.moveTo(wx*u - Math.cos(anim*2)*0.6*u, -1.7*u - Math.sin(anim*2)*0.6*u);
+    ctx.lineTo(wx*u + Math.cos(anim*2)*0.6*u, -1.7*u + Math.sin(anim*2)*0.6*u);
+    ctx.stroke();
+  }
+  if (wings) drawMountWings(u, -5*u);
+  // caroserie înaltă portocalie
+  ctx.fillStyle = '#e8742a';
+  roundRect(-5.6*u, -6.6*u, 11.2*u, 5.2*u, 1.1*u); ctx.fill();
+  // fustă neagră jos (cladding de SUV)
+  ctx.fillStyle = '#26282c';
+  roundRect(-5.6*u, -2.6*u, 11.2*u, 1.2*u, 0.5*u); ctx.fill();
+  // grilă verticală + far cu „gheare" DRL
+  ctx.fillStyle = '#26282c';
+  roundRect(4.4*u, -5.4*u, 1.2*u, 2.6*u, 0.3*u); ctx.fill();
+  ctx.strokeStyle = '#e8742a'; ctx.lineWidth = 0.18*u;
+  for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(4.55*u + i*0.35*u, -5.2*u); ctx.lineTo(4.55*u + i*0.35*u, -3*u); ctx.stroke(); }
+  ctx.fillStyle = '#ffe9b0';
+  ctx.fillRect(4.3*u, -6.2*u, 1.1*u, 0.7*u);
+  ctx.fillStyle = '#fff';
+  for (let i = 0; i < 3; i++) ctx.fillRect(3.4*u + i*0.4*u, -6.4*u, 0.22*u, 0.9*u);
+  // capotă + parbriz
+  ctx.fillStyle = '#c85e1e';
+  roundRect(2.4*u, -7*u, 2.6*u, 1*u, 0.4*u); ctx.fill();
+  ctx.fillStyle = '#bfe4ff';
+  ctx.beginPath();
+  ctx.moveTo(2.2*u, -6.4*u); ctx.lineTo(2.9*u, -8.2*u);
+  ctx.lineTo(4*u, -8.2*u); ctx.lineTo(3.5*u, -6.4*u);
+  ctx.closePath(); ctx.fill();
+  // Toty la volan — tricou alb cu anchior, bronzat
+  ctx.fillStyle = cfg.shirt;
+  ctx.fillRect(-2.3*u, -10.6*u, 3.6*u, 4.4*u);
+  ctx.fillRect(0.7*u, -10.2*u, 1.8*u, 1.1*u);
+  ctx.fillStyle = cfg.skin;
+  ctx.beginPath(); ctx.moveTo(-1.3*u, -10.6*u); ctx.lineTo(-0.5*u, -9.4*u); ctx.lineTo(0.3*u, -10.6*u); ctx.closePath(); ctx.fill();
+  ctx.fillRect(2.2*u, -10.4*u, 1.1*u, 1.3*u);
+  ctx.strokeStyle = '#22262a'; ctx.lineWidth = 0.35*u;
+  ctx.beginPath(); ctx.arc(2.6*u, -8.8*u, 0.95*u, 0, Math.PI*2); ctx.stroke();
+  // cap cu păr scurt grizonat
+  ctx.fillStyle = cfg.skin;
+  ctx.fillRect(-2.7*u, -15.6*u, 4.6*u, 5.2*u);
+  ctx.fillStyle = cfg.hairColor;
+  ctx.fillRect(-3*u, -16.1*u, 5.2*u, 1.4*u);
+  ctx.fillRect(-3*u, -15*u, 0.7*u, 1.6*u);
+  // față zâmbitoare
+  ctx.fillStyle = '#222';
+  ctx.fillRect(-0.6*u, -13.9*u, 0.8*u, 1*u);
+  ctx.fillRect(0.9*u, -13.9*u, 0.8*u, 1*u);
+  ctx.fillStyle = '#c96b5c';
+  ctx.fillRect(0.05*u, -11.7*u, 0.95*u, 0.38*u);
+  ctx.restore();
 }
 
 /* Antonia pe iepuraș săltăreț 🐰 */
@@ -3040,6 +3241,36 @@ function drawKidOnFoot(cx, footY, cfg, h, dir, anim, jumping, punching, wings) {
     ctx.fillRect(2.6*u, -7.2*u + throwLift, 1.6*u, 1.6*u);
   }
 
+  if (cfg.flower) {                    // floarea colorată de pe tricoul lui Mari 🌺
+    const cyf = -7.6*u;
+    const colsF = ['#e8452a','#ff9f1c','#ffd23f','#c8388a','#3a8ad8'];
+    for (let i = 0; i < 5; i++) {
+      const a = i * Math.PI*2/5 - 0.5;
+      ctx.fillStyle = colsF[i];
+      ctx.beginPath(); ctx.ellipse(Math.cos(a)*0.9*u, cyf + Math.sin(a)*0.9*u, 0.8*u, 0.45*u, a, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.fillStyle = '#a02848';
+    ctx.beginPath(); ctx.arc(0, cyf, 0.5*u, 0, Math.PI*2); ctx.fill();
+  }
+  if (cfg.sunflower) {                 // floarea-soarelui din mâna lui Mari 🌻
+    const sway = Math.sin(time*3) * 0.12;
+    ctx.save();
+    ctx.translate(-3.4*u, -6.6*u);
+    ctx.rotate(-0.12 + sway);
+    ctx.strokeStyle = '#3a8a3a'; ctx.lineWidth = 0.4*u;
+    ctx.beginPath(); ctx.moveTo(0, 3*u); ctx.lineTo(0, -3.4*u); ctx.stroke();
+    ctx.fillStyle = '#4a9a3a';
+    ctx.beginPath(); ctx.ellipse(0.7*u, 0.4*u, 1*u, 0.45*u, -0.5, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#ffd23f';
+    for (let i = 0; i < 8; i++) {
+      const a = i * Math.PI/4;
+      ctx.beginPath(); ctx.ellipse(Math.cos(a)*1.5*u, -3.4*u + Math.sin(a)*1.5*u, 0.85*u, 0.42*u, a, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.fillStyle = '#6a4a1a';
+    ctx.beginPath(); ctx.arc(0, -3.4*u, 0.95*u, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
   ctx.fillStyle = cfg.skin;
   ctx.fillRect(-3.2*u, -16*u, 6.4*u, 6.2*u);
   ctx.fillStyle = cfg.hairColor;
@@ -3219,21 +3450,23 @@ function drawHelperSelect() {
   ctx.fillStyle = '#fff';
   ctx.fillText('Cine vine să te ajute? 🤝', W/2, 140);
 
-  for (let i = 0; i < 2; i++) {
-    const cfg = helperList()[i];
-    const bx = i === 0 ? W/4 : 3*W/4;
+  const hl = helperList(), n = hl.length;
+  for (let i = 0; i < n; i++) {
+    const cfg = hl[i];
+    const bx = W * ((i + 0.5) / n);
+    const cw = n > 2 ? 216 : 300;
     const sel = selHelperHover === i;
     ctx.fillStyle = sel ? 'rgba(255,255,255,.95)' : 'rgba(255,255,255,.5)';
-    roundRect(bx - 150, 180, 300, 300, 24); ctx.fill();
+    roundRect(bx - cw/2, 180, cw, 300, 24); ctx.fill();
     if (sel) {
       ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 6;
-      roundRect(bx - 150, 180, 300, 300, 24); ctx.stroke();
+      roundRect(bx - cw/2, 180, cw, 300, 24); ctx.stroke();
     }
     const bob = sel ? Math.sin(time*5)*5 : 0;
-    if (cfg.mount) drawKid(bx, 440 + bob, cfg, 110 * cfg.scale, 1, sel ? time*6 : 0, false, false);
-    else drawKidOnFoot(bx, 440 + bob, cfg, 150 * cfg.scale * (cfg.vmul || 1) / 1.25, 1, sel ? time*6 : 0, false);
+    if (cfg.mount) drawKid(bx, 440 + bob, cfg, (n > 2 ? 92 : 110) * cfg.scale, 1, sel ? time*6 : 0, false, false);
+    else drawKidOnFoot(bx, 440 + bob, cfg, (n > 2 ? 128 : 150) * cfg.scale * (cfg.vmul || 1) / 1.25, 1, sel ? time*6 : 0, false);
     ctx.fillStyle = '#333';
-    ctx.font = 'bold 32px "Segoe UI", Arial';
+    ctx.font = 'bold ' + (n > 2 ? 24 : 32) + 'px "Segoe UI", Arial';
     ctx.fillText(cfg.emoji + ' ' + cfg.name, bx, 225);
   }
   ctx.fillStyle = '#fff';
@@ -3252,9 +3485,10 @@ function drawBossVictory() {
     ctx.font = '30px "Segoe UI", Arial';
     ctx.fillText('Echipă de aur! ⭐', W/2, H/2 + 40);
   } else {
-    const items = ['iepuras', 'masina-spalat', 'gantera', 'cafea'];
+    const items = ['iepuras', 'masina-spalat', 'gantera', 'cafea', 'crap', 'bani'];
     const finals = ['un iepuraș uriaș! 🐰✨', 'o mașină de spălat fericită! 🧺😊',
-                    'gantera de aur! 🏋️💪', 'espressorul magic de cafea! ☕✨'];
+                    'gantera de aur! 🏋️💪', 'espressorul magic de cafea! ☕✨',
+                    'crapul de aur! 🎣🐟', 'comoara cu teancuri de bani! 💰✨'];
     drawEggItem(items[charIdx] || 'iepuras', W/2, H/2 - 70, 2.3);
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 30px "Segoe UI", Arial';
@@ -3298,25 +3532,25 @@ function drawSelect() {
   ctx.fillText('Cine se joacă? 😊', W/2, 155);
 
   const rec = loadRecords();
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 6; i++) {
     const cfg = CHARACTERS[i];
-    const bx = W * (0.125 + i * 0.25);
+    const bx = W * ((i + 0.5) / 6);
     const sel = selHover === i;
     ctx.fillStyle = sel ? 'rgba(255,255,255,.95)' : 'rgba(255,255,255,.55)';
-    roundRect(bx - 116, 190, 232, 300, 22); ctx.fill();
+    roundRect(bx - 79, 190, 158, 300, 18); ctx.fill();
     if (sel) {
-      ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 6;
-      roundRect(bx - 116, 190, 232, 300, 22); ctx.stroke();
+      ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 5;
+      roundRect(bx - 79, 190, 158, 300, 18); ctx.stroke();
     }
     const bob = sel ? Math.sin(time*5)*5 : 0;
-    if (cfg.mount) drawKid(bx, 430 + bob, cfg, 105 * cfg.scale, 1, sel ? time*6 : 0, false, false);
-    else drawKidOnFoot(bx, 435 + bob, cfg, 125 * cfg.scale * (cfg.vmul || 1) / 1.25, 1, sel ? time*6 : 0, false);
+    if (cfg.mount) drawKid(bx, 428 + bob, cfg, 82 * cfg.scale, 1, sel ? time*6 : 0, false, false);
+    else drawKidOnFoot(bx, 432 + bob, cfg, 100 * cfg.scale * (cfg.vmul || 1) / 1.25, 1, sel ? time*6 : 0, false);
     ctx.fillStyle = '#333';
-    ctx.font = 'bold 26px "Segoe UI", Arial';
-    ctx.fillText(cfg.emoji + ' ' + cfg.name, bx, 230);
-    ctx.font = 'bold 19px "Segoe UI", Arial';
+    ctx.font = 'bold 20px "Segoe UI", Arial';
+    ctx.fillText(cfg.emoji + ' ' + cfg.name, bx, 228);
+    ctx.font = 'bold 16px "Segoe UI", Arial';
     ctx.fillStyle = '#8a6a10';
-    ctx.fillText('🏆 ' + (rec[cfg.name] || 0), bx, 466);
+    ctx.fillText('🏆 ' + (rec[cfg.name] || 0), bx, 468);
   }
   ctx.fillStyle = '#fff';
   ctx.font = '24px "Segoe UI", Arial';
