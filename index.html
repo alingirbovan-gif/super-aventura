@@ -127,7 +127,7 @@ const GRANDS = [
   {
     name: 'Toty', emoji: '🚙', mount: 'suv', attack: 'ram',   // lovește cu botul mașinii + claxon 📯
     hair: 'scurt', hairColor: '#9aa0a6', skin: '#d89a6a',     // păr grizonat, bronzat bine
-    shirt: '#f6f6f2', pants: '#b0b4ba', shoes: '#5a5f66', scale: 0.95, vmul: 1.12,
+    shirt: '#f6f6f2', pants: '#b0b4ba', shoes: '#5a5f66', scale: 1.0, vmul: 1.28,   // mai mare decât Marc
   },
   {
     name: 'Mari', emoji: '🌻', attack: 'throw', proj: 'sunflower',
@@ -398,7 +398,137 @@ const LEVELS_NEW = [
 ]},
 ];
 
-/* Ordinea finală v3: subteran → suprafață → apă → cer → drum → stradă → școală → castel */
+/* ---- Zonele 3: Râșca 🏔️, Parcul 🌳, Marea din Cipru 🏖️ ---- */
+const LEVELS_ZONE3 = [
+{ name:'Poienile din Râșca 🏔️', theme:'munte', altMount:'munte', map:[
+'',
+'',
+'....................C.C.C.C...............................................C.C.C.C..................................................C.C.C.........',
+'....................=======...............................................=======..................................................=====.........',
+'',
+'',
+'..............................=====.........Q....................................................=====..........Q................................',
+'..........BQB..........................................BWB..............Z...............BIB..............................BWB.....................',
+'....BWB.............................BI......................C.C......................................C.C.........................................',
+'.............................................====...................................................====.........................................',
+'..P..............E.........E..............E..............L....E..........K...............E.........E.......L......E.........E...........F........',
+'####################...########################...#############################...########################...####################################',
+]},
+{ name:'Stâncile Brazilor 🌲', theme:'munte', altMount:'munte', map:[
+'',
+'',
+'..............C.C.C.C.........................................C.C.C.C.........................................C.C.C.C............................',
+'..............=======.........................................=======.........................................=======............................',
+'',
+'.........................................Q.......................................................Q...............................................',
+'...........................====....................====..............................====................====...................................',
+'.......BSB..........................BHB...............................Z.............BWB..............................BIB..........................',
+'...BI.............BB......................................C.C.C..........................................C.C.....................................',
+'......................................====...........................................====........................................................',
+'..P...........E........L....E.............E...........E......L...........K............E.......E........L.....E..........E..............F.........',
+'################...##########################...###########################...#########################...#######################################',
+]},
+{ name:'Vârful Ursului 🐻', theme:'munte', altMount:'munte', miniboss:{ kind:'urs', title:'Ursul Brun', hp:14 }, map:[
+'',
+'',
+'.................C.C.C..........................................C.C.C...........................................................',
+'.................=====..........................................=====...........................................................',
+'',
+'',
+'...........................====..........Q.........................................=====........................................',
+'........BWB...............................................BIB..........Z........................................................',
+'.....BB......................BI..................C.C....................................G.......................................',
+'....................................====........................................................................................',
+'..P..........E.........E..............E.........L....E......K..............E......L................X..........F.................',
+'##################...############################...############################################################################',
+]},
+{ name:'Aleea Parcului 🌳', theme:'parc', altMount:'parc', map:[
+'',
+'',
+'......................C.C.C.C...........................................C.C.C.C..............................C.C.C.C.............................',
+'......................=======...........................................=======..............................=======.............................',
+'',
+'',
+'................................=====..........Q..........................................====..........Q........................................',
+'...........BQB.........................................BWB...............Z...........BHB.............................BSB..........................',
+'.....BI............................BB.....................C.C..................................C.C...............................................',
+'..........................................====....................................====...........................................................',
+'..P...........E.........L.....E..............E..........E......L..........K...........E........E.......L......E...........E............F.........',
+'###################...#########################...############################...#########################...####################################',
+]},
+{ name:'Locul de Joacă 🎠', theme:'parc', altMount:'parc', map:[
+'',
+'',
+'...................C.C.C...............................................C.C.C.....................................................................',
+'...................=====...............................................=====.....................................................................',
+'',
+'.....................................C.C.C..............................................C.C.C....................................................',
+'.....................................=====...........====...............................=====...........====....................................',
+'.........BWR...............................................BIB..............Z........................................BQB.........................',
+'....BQ.............BB...........................C.C..............................BB..........................................C.C.................',
+'...........................====......................................................................====........................................',
+'..P..........E...........E.............E.........L.....E.................K..........E.........E........L......E..........E............F..........',
+'#################...##########################...#############################...##########################...###################################',
+]},
+{ name:'Lacul cu Rațe 🦆', theme:'parc', altMount:'parc', miniboss:{ kind:'albina', title:'Albina Regină', hp:14 }, map:[
+'',
+'',
+'..................C.C.C.........................................C.C.C...........................................................',
+'..................=====.........................................=====...........................................................',
+'',
+'',
+'............................====.........Q..........................................====........................................',
+'.........BSB..............................................BWB..........Z........................................................',
+'.....BI.....................BB..................C.C.....................................G.......................................',
+'',
+'..P..........E.........L.....E..............E........E......K..............E......L...............X..........F.................',
+'##################...############################...############################################################################',
+]},
+{ name:'Plaja din Cipru 🏖️', theme:'plaja', altMount:'plaja', map:[
+'',
+'',
+'....................C.C.C.C...............................................C.C.C.C..................................................C.C.C.........',
+'....................=======...............................................=======..................................................=====.........',
+'',
+'',
+'..............................=====.........Q....................................................=====..........Q................................',
+'..........BQB..........................................BWB..............Z...............BIB..............................BWB.....................',
+'....BWB.............................BI......................C.C......................................C.C.........................................',
+'.............................................====...................................................====.........................................',
+'..P..............E.........E..............E..............L....E..........K...............E.........E.......L......E.........E...........F........',
+'####################...########################...#############################...########################...####################################',
+]},
+{ name:'Golful Turcoaz 🐚', theme:'plaja', altMount:'plaja', map:[
+'',
+'',
+'..............C.C.C.C.........................................C.C.C.C.........................................C.C.C.C............................',
+'..............=======.........................................=======.........................................=======............................',
+'',
+'.........................................Q.......................................................Q...............................................',
+'...........................====....................====..............................====................====...................................',
+'.......BSB..........................BHB...............................Z.............BWB..............................BIB..........................',
+'...BI.............BB......................................C.C.C..........................................C.C.....................................',
+'......................................====...........................................====........................................................',
+'..P...........E........L....E.............E...........E......L...........K............E.......E........L.....E..........E..............F.........',
+'################...##########################...###########################...#########################...#######################################',
+]},
+{ name:'Apa Adâncă 🦈', theme:'plaja', altMount:'plaja', miniboss:{ kind:'rechin', title:'Rechinul', hp:16 }, map:[
+'',
+'',
+'.................C.C.C..........................................C.C.C...........................................................',
+'.................=====..........................................=====...........................................................',
+'',
+'',
+'...........................====..........Q.........................................=====........................................',
+'........BWB...............................................BIB..........Z........................................................',
+'.....BB......................BI..................C.C....................................G.......................................',
+'....................................====........................................................................................',
+'..P..........E.........E..............E.........L....E......K..............E......L................X..........F.................',
+'##################...############################...############################################################################',
+]},
+];
+
+/* Ordinea finală v3.2: subteran → suprafață → apă → cer → drum → stradă → școală → munte → parc → plajă → castel */
 const LEVELS = [
   LEVELS_BASE[2], LEVELS_BASE[3],                  // 1-2  Subteranul, Peștera
   LEVELS_BASE[0], LEVELS_BASE[1],                  // 3-4  Câmpia (+Konkey Kong), Pădurea (role/trotinetă)
@@ -407,7 +537,10 @@ const LEVELS = [
   LEVELS_BASE[8],                                  // 9    Drumul spre Castel (+Regele Bu)
   LEVELS_NEW[0], LEVELS_NEW[1], LEVELS_NEW[2],     // 10-12 Strada (+Câinele Rex)
   LEVELS_NEW[3], LEVELS_NEW[4], LEVELS_NEW[5],     // 13-15 Școala (+Ghiozdanul Uriaș)
-  LEVELS_BASE[9],                                  // 16   Castelul Balaurului
+  LEVELS_ZONE3[0], LEVELS_ZONE3[1], LEVELS_ZONE3[2],   // 16-18 Râșca (+Ursul Brun)
+  LEVELS_ZONE3[3], LEVELS_ZONE3[4], LEVELS_ZONE3[5],   // 19-21 Parcul (+Albina Regină)
+  LEVELS_ZONE3[6], LEVELS_ZONE3[7], LEVELS_ZONE3[8],   // 22-24 Cipru (+Rechinul)
+  LEVELS_BASE[9],                                  // 25   Castelul Balaurului
 ];
 
 /* ================= SUNETE (WebAudio) ================= */
@@ -457,6 +590,9 @@ const THEME_MUSIC = {
   nori:     { trans: 4,  tempo: 1.05, boss: false },
   strada:   { trans: 2,  tempo: 1.1,  boss: false },
   scoala:   { trans: 5,  tempo: 0.95, boss: false },
+  munte:    { trans: -2, tempo: 0.9,  boss: false },
+  parc:     { trans: 7,  tempo: 1.08, boss: false },
+  plaja:    { trans: 3,  tempo: 0.85, boss: false },
   boss:     { trans: 0,  tempo: 1.25, boss: true },
 };
 let musicMuted = false;
@@ -801,8 +937,10 @@ function makeEnemy(x, y, forceKind) {
     onGround: false, dead: false, deadT: 0, anim: Math.random()*6 };
 }
 function makeBoss(x, y, kind, hp) {
-  const w = kind === 'boo' ? 90 : kind === 'kong' ? 110 : kind === 'dog' ? 130 : kind === 'ghiozdan' ? 100 : 120;
-  const h = kind === 'boo' ? 90 : kind === 'ghiozdan' ? 110 : 104;
+  const w = kind === 'boo' ? 90 : kind === 'kong' ? 110 : kind === 'dog' ? 130 : kind === 'ghiozdan' ? 100 :
+            kind === 'urs' ? 134 : kind === 'albina' ? 104 : kind === 'rechin' ? 150 : 120;
+  const h = kind === 'boo' ? 90 : kind === 'ghiozdan' ? 110 : kind === 'urs' ? 116 :
+            kind === 'albina' ? 88 : kind === 'rechin' ? 78 : 104;
   return { kind: kind || 'balaur', x: x - w/2 + 24, y: y + TILE - h, w, h, homeX: x + 24,
     vx: -70, vy: 0, onGround: false, hp, maxHp: hp, invT: 0, jumpCd: 3.5, dead: false, anim: 0 };
 }
@@ -1174,15 +1312,18 @@ function updateBoss(dt) {
   b.anim += dt * 6;
   if (b.invT > 0) b.invT -= dt;
   // viteza crește când e rănit
-  const base = b.kind === 'kong' ? 60 : b.kind === 'bowzer' ? 55 : b.kind === 'dog' ? 75 : b.kind === 'ghiozdan' ? 50 : 70;
+  const base = b.kind === 'kong' ? 60 : b.kind === 'bowzer' ? 55 : b.kind === 'dog' ? 75 : b.kind === 'ghiozdan' ? 50 :
+               b.kind === 'urs' ? 58 : b.kind === 'albina' ? 82 : b.kind === 'rechin' ? 88 : 70;
   const spd = base + (1 - b.hp / b.maxHp) * (b.kind === 'balaur' ? 55 : 35);
   b.vx = b.vx < 0 ? -spd : spd;
-  if (b.kind === 'boo') {
-    // Regele Bu plutește 👻
+  if (b.kind === 'boo' || b.kind === 'albina' || b.kind === 'rechin') {
+    // boșii care plutesc: Regele Bu 👻, Albina Regină 🐝, Rechinul 🦈
     b.x += b.vx * dt;
     if (Math.abs(b.x + b.w/2 - b.homeX) > 380 ||
         solidForBody(tileAt(b.vx < 0 ? b.x - 4 : b.x + b.w + 4, b.y + b.h/2))) b.vx = -b.vx;
-    b.y = 11*TILE - b.h - 26 + Math.sin(b.anim * 0.8) * 24;
+    const off = b.kind === 'albina' ? 70 : b.kind === 'rechin' ? 14 : 26;
+    const amp = b.kind === 'albina' ? 34 : b.kind === 'rechin' ? 12 : 24;
+    b.y = 11*TILE - b.h - off + Math.sin(b.anim * 0.8) * amp;
   } else {
     b.jumpCd -= dt;
     if (b.jumpCd <= 0 && b.onGround) {
@@ -1257,12 +1398,13 @@ function updateHelper(dt) {
   } else if (fightMode) {
     tx = b.x + b.w/2 - h.w/2 - (meleeRange ? 0 : Math.sign((b.x+b.w/2)-(h.x+h.w/2) || 1) * 90);
   } else {
-    tx = player.x - 45;   // rămâne aproape de jucător, îl urmărește îndeaproape
+    // merge ÎN FAȚA jucătorului, pe direcția de mers, ca scut 🛡️
+    tx = player.dir > 0 ? player.x + player.w + 55 : player.x - 55 - h.w;
   }
   const dx = tx - h.x;
-  if (Math.abs(dx) > 20) { h.vx += Math.sign(dx) * 2000 * dt; h.dir = Math.sign(dx) || 1; }
+  if (Math.abs(dx) > 20) { h.vx += Math.sign(dx) * 2400 * dt; h.dir = Math.sign(dx) || 1; }
   else { h.vx *= 0.85; }
-  h.vx = Math.max(-300, Math.min(300, h.vx));
+  h.vx = Math.max(-385, Math.min(385, h.vx));   // mai rapid ca jucătorul, ca să poată trece în față
   if (engageEnemy) {                                    // ajutorul curăță inamicii din cale (inclusiv lângă boss) 💪
     const edx = (engageEnemy.x + engageEnemy.w/2) - (h.x + h.w/2);
     const edist = Math.abs(edx);
@@ -1313,8 +1455,8 @@ function updateHelper(dt) {
     if (h.onGround && (wa || pa)) { h.vy = -JUMP_V; h.vx = h.dir * 300; }   // salt complet, la fel de puternic ca al jucătorului
   }
   moveBody(h, dt, false);
-  h.vx = Math.max(-300, Math.min(300, h.vx));
-  if (h.y > H + 150) { h.x = player.x - 45; h.y = player.y - 60; h.vy = 0; }   // plasă de siguranță
+  h.vx = Math.max(-385, Math.min(385, h.vx));
+  if (h.y > H + 150) { h.x = player.x + player.w + 50; h.y = player.y - 60; h.vy = 0; }   // plasă de siguranță
   if (Math.abs(h.vx) > 20 && h.onGround) h.anim += dt * 11; else if (h.onGround) h.anim = 0;
 }
 
@@ -1543,6 +1685,9 @@ function drawBackground() {
   if (theme === 'nori' && state !== 'select')     { top = '#7ec0ff'; bot = '#d8ecff'; }
   if (theme === 'strada' && state !== 'select')   { top = '#3a4a7c'; bot = '#8a92c0'; }
   if (theme === 'scoala' && state !== 'select')   { top = '#f4ecd0'; bot = '#e2d2a8'; }
+  if (theme === 'munte' && state !== 'select')    { top = '#8ac4f0'; bot = '#d8ecfa'; }
+  if (theme === 'parc' && state !== 'select')     { top = '#9ad4f5'; bot = '#d8f0d0'; }
+  if (theme === 'plaja' && state !== 'select')    { top = '#6ec2f0'; bot = '#bde8f8'; }
   if (theme === 'boss' && state !== 'select')     { top = '#2a1425'; bot = '#4a2438'; }
   const sky = ctx.createLinearGradient(0,0,0,H);
   sky.addColorStop(0, top); sky.addColorStop(1, bot);
@@ -1623,6 +1768,84 @@ function drawBackground() {
         ctx.beginPath(); ctx.arc(bx + 40, 135, 14, 0, Math.PI*2); ctx.fill();
       }
     }
+  } else if (theme === 'munte') {
+    // vârfuri stâncoase + brazi 🏔️🌲
+    ctx.fillStyle = '#8a8f9c';
+    for (let i = 0; i < 4; i++) {
+      const mx = ((i * 460 + 80 - camX*0.25) % (W + 600)) - 300;
+      ctx.beginPath();
+      ctx.moveTo(mx, H - 48); ctx.lineTo(mx + 150, 100 + (i%2)*60); ctx.lineTo(mx + 320, H - 48);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#f0f4f8';   // zăpadă pe vârf
+      ctx.beginPath();
+      ctx.moveTo(mx + 116, 145 + (i%2)*60); ctx.lineTo(mx + 150, 100 + (i%2)*60); ctx.lineTo(mx + 186, 148 + (i%2)*60);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#8a8f9c';
+    }
+    for (let i = 0; i < 8; i++) {
+      const bx = ((i * 240 + 50 - camX*0.55) % (W + 300)) - 150;
+      const bh = 80 + (i%3)*26;
+      ctx.fillStyle = '#5a4028';
+      ctx.fillRect(bx + 14, H - 48 - 14, 8, 14);
+      ctx.fillStyle = i % 2 ? '#2e6a3a' : '#25572f';   // brad în 3 trepte
+      for (let t2 = 0; t2 < 3; t2++) {
+        const tw = 46 - t2*10, ty = H - 48 - 14 - t2*(bh/3.3);
+        ctx.beginPath();
+        ctx.moveTo(bx + 18 - tw/2, ty); ctx.lineTo(bx + 18, ty - bh/2.5); ctx.lineTo(bx + 18 + tw/2, ty);
+        ctx.closePath(); ctx.fill();
+      }
+    }
+  } else if (theme === 'parc') {
+    // copaci rotunzi, bănci și felinare 🌳
+    for (let i = 0; i < 6; i++) {
+      const tx2 = ((i * 330 + 60 - camX*0.4) % (W + 400)) - 200;
+      ctx.fillStyle = '#6a4a2a';
+      ctx.fillRect(tx2 + 26, H - 48 - 70, 14, 70);
+      ctx.fillStyle = i % 2 ? '#4a9a3a' : '#3d8a30';
+      ctx.beginPath();
+      ctx.arc(tx2 + 33, H - 48 - 96, 42, 0, Math.PI*2);
+      ctx.arc(tx2 + 8, H - 48 - 74, 30, 0, Math.PI*2);
+      ctx.arc(tx2 + 60, H - 48 - 74, 30, 0, Math.PI*2);
+      ctx.fill();
+    }
+    for (let i = 0; i < 4; i++) {
+      const bx = ((i * 470 + 220 - camX*0.6) % (W + 500)) - 250;
+      ctx.fillStyle = '#8a5a2a';                     // bancă
+      ctx.fillRect(bx, H - 48 - 26, 64, 7);
+      ctx.fillRect(bx, H - 48 - 44, 64, 7);
+      ctx.fillRect(bx + 6, H - 48 - 26, 6, 26);
+      ctx.fillRect(bx + 52, H - 48 - 26, 6, 26);
+    }
+  } else if (theme === 'plaja') {
+    // marea turcoaz cu valuri + soare + palmieri + umbrele 🏖️
+    ctx.fillStyle = '#ffd23f';
+    ctx.beginPath(); ctx.arc(W - 120, 80, 42, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#1fa8c8';
+    ctx.fillRect(0, H - 210, W, 162);
+    ctx.fillStyle = 'rgba(255,255,255,.5)';
+    for (let i = 0; i < 9; i++) {
+      const wx2 = ((i * 180 + time*40 - camX*0.3) % (W + 200)) - 100;
+      ctx.beginPath(); ctx.arc(wx2, H - 205 + (i%3)*46, 16, 0, Math.PI); ctx.fill();
+    }
+    for (let i = 0; i < 3; i++) {
+      const px2 = ((i * 560 + 140 - camX*0.5) % (W + 600)) - 300;
+      ctx.strokeStyle = '#8a5a2a'; ctx.lineWidth = 10; ctx.lineCap = 'round';   // palmier
+      ctx.beginPath(); ctx.moveTo(px2, H - 48); ctx.quadraticCurveTo(px2 + 18, H - 150, px2 + 40, H - 190); ctx.stroke();
+      ctx.fillStyle = '#2e8a3a';
+      for (let f2 = 0; f2 < 5; f2++) {
+        const a = -0.4 - f2 * 0.55;
+        ctx.beginPath(); ctx.ellipse(px2 + 40 + Math.cos(a)*34, H - 190 + Math.sin(a)*24, 34, 9, a, 0, Math.PI*2); ctx.fill();
+      }
+    }
+    for (let i = 0; i < 3; i++) {
+      const ux = ((i * 620 + 420 - camX*0.6) % (W + 600)) - 300;   // umbrelă de soare
+      ctx.strokeStyle = '#e8e2d0'; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.moveTo(ux, H - 48); ctx.lineTo(ux, H - 128); ctx.stroke();
+      ctx.fillStyle = i % 2 ? '#e8452a' : '#3a8ad8';
+      ctx.beginPath(); ctx.arc(ux, H - 122, 46, Math.PI, 0); ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.moveTo(ux - 30, H - 124); ctx.arc(ux, H - 122, 46, Math.PI*1.25, Math.PI*1.45); ctx.closePath(); ctx.fill();
+    }
   } else if (theme === 'boss') {
     ctx.fillStyle = 'rgba(255,90,40,.14)';
     for (let i = 0; i < 8; i++) {
@@ -1665,6 +1888,25 @@ function drawTile(t, x, y) {
       ctx.fillStyle = 'rgba(255,255,255,.25)'; ctx.fillRect(x, y, TILE, 6);
       ctx.strokeStyle = '#a8823a'; ctx.lineWidth = 2;
       ctx.strokeRect(x+1, y+1, TILE-2, TILE-2);
+    } else if (theme === 'munte') {
+      ctx.fillStyle = '#7a7f88'; ctx.fillRect(x, y, TILE, TILE);   // stâncă
+      ctx.fillStyle = '#5cb85c'; ctx.fillRect(x, y, TILE, 8);      // iarbă de munte
+      ctx.strokeStyle = '#5a5f68'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x+8, y+18); ctx.lineTo(x+22, y+30); ctx.moveTo(x+28, y+14); ctx.lineTo(x+40, y+28); ctx.stroke();
+    } else if (theme === 'parc') {
+      ctx.fillStyle = '#d8c8a0'; ctx.fillRect(x, y, TILE, TILE);   // alee cu pietriș
+      ctx.fillStyle = '#5cb85c'; ctx.fillRect(x, y, TILE, 9);
+      ctx.fillStyle = '#b8a878';
+      ctx.beginPath(); ctx.arc(x+12, y+24, 4, 0, Math.PI*2); ctx.arc(x+30, y+34, 3.5, 0, Math.PI*2); ctx.arc(x+38, y+18, 3, 0, Math.PI*2); ctx.fill();
+    } else if (theme === 'plaja') {
+      ctx.fillStyle = '#f0dc9a'; ctx.fillRect(x, y, TILE, TILE);   // nisip auriu
+      ctx.fillStyle = '#f8ecc0'; ctx.fillRect(x, y, TILE, 8);
+      ctx.fillStyle = '#d8bc72';
+      ctx.beginPath(); ctx.arc(x+14, y+24, 3, 0, Math.PI*2); ctx.arc(x+32, y+34, 3.5, 0, Math.PI*2); ctx.fill();
+      if (Math.floor(x/TILE) % 5 === 0) {                           // scoică 🐚
+        ctx.fillStyle = '#f8b8d0';
+        ctx.beginPath(); ctx.arc(x+36, y+16, 4, Math.PI, 0); ctx.fill();
+      }
     } else if (theme === 'boss') {
       ctx.fillStyle = '#4a3a50'; ctx.fillRect(x, y, TILE, TILE);
       ctx.strokeStyle = '#32242e'; ctx.lineWidth = 2;
@@ -1695,10 +1937,14 @@ function drawTile(t, x, y) {
     ctx.fillText('?', x + TILE/2, y + TILE/2 + bounce);
   } else if (t === 4) {
     ctx.fillStyle = theme === 'nori' ? '#fff' : theme === 'subteran' ? '#6a5a9a' :
-                    theme === 'strada' ? '#9aa3ab' : theme === 'scoala' ? '#b8763a' : '#2a9d3a';
+                    theme === 'strada' ? '#9aa3ab' : theme === 'scoala' ? '#b8763a' :
+                    theme === 'munte' ? '#8a8f98' : theme === 'parc' ? '#8a5a2a' :
+                    theme === 'plaja' ? '#c8935a' : '#2a9d3a';
     ctx.fillRect(x, y, TILE, 14);
     ctx.fillStyle = theme === 'nori' ? '#d8e4f0' : theme === 'subteran' ? '#4a3a72' :
-                    theme === 'strada' ? '#6a737b' : theme === 'scoala' ? '#8a5220' : '#1a7a28';
+                    theme === 'strada' ? '#6a737b' : theme === 'scoala' ? '#8a5220' :
+                    theme === 'munte' ? '#5a5f68' : theme === 'parc' ? '#6a4020' :
+                    theme === 'plaja' ? '#a87438' : '#1a7a28';
     ctx.fillRect(x, y+10, TILE, 4);
   } else if (t === 5) {
     ctx.fillStyle = '#9a7a4a'; ctx.fillRect(x, y, TILE, TILE);
@@ -2279,7 +2525,49 @@ function drawEnemy(en) {
     ctx.save();
     ctx.translate(x+w/2, y+h/2);
     ctx.scale(d, 1);
-    if (theme === 'scoala') {                        // avion de hârtie ✈️📄
+    if (theme === 'munte') {                         // bufniță 🦉
+      const fl2 = Math.sin(en.anim*2) * 8;
+      ctx.fillStyle = '#7a5a3a';
+      ctx.beginPath(); ctx.ellipse(0, 0, w/2.4, h/2.3, 0, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#5a4028';
+      ctx.beginPath(); ctx.ellipse(-6, -6+fl2*0.5, 13, 6, -0.4, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#e8d8b8';                     // burtă
+      ctx.beginPath(); ctx.ellipse(2, 5, 9, 10, 0, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#fff';                        // ochi mari de bufniță
+      ctx.beginPath(); ctx.arc(2, -8, 6.5, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(13, -8, 6.5, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#222';
+      ctx.beginPath(); ctx.arc(3, -8, 3, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(14, -8, 3, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#ffb020';
+      ctx.beginPath(); ctx.moveTo(6, -3); ctx.lineTo(9, 2); ctx.lineTo(12, -3); ctx.closePath(); ctx.fill();
+    } else if (theme === 'parc') {                   // albină 🐝
+      const fl2 = Math.sin(en.anim*4) * 6;
+      ctx.fillStyle = '#ffd23f';
+      ctx.beginPath(); ctx.ellipse(0, 0, w/2.4, h/2.8, 0, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#2c2c2c';                     // dungi
+      ctx.fillRect(-w/4, -h/3.2, 6, h/1.6);
+      ctx.fillRect(-w/4 + 12, -h/3.2, 6, h/1.6);
+      ctx.fillStyle = 'rgba(200,230,255,.85)';       // aripi
+      ctx.beginPath(); ctx.ellipse(-2, -12+fl2*0.6, 10, 5, -0.5, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(6, -12-fl2*0.6, 10, 5, 0.3, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#2c2c2c';                     // ac
+      ctx.beginPath(); ctx.moveTo(-w/2.4, 0); ctx.lineTo(-w/2.4-8, 2); ctx.lineTo(-w/2.4, 5); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(w/4, -4, 4.5, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#222';
+      ctx.beginPath(); ctx.arc(w/4+1, -4, 2.2, 0, Math.PI*2); ctx.fill();
+    } else if (theme === 'plaja') {                  // pescăruș 🕊️
+      const fl2 = Math.sin(en.anim*2) * 9;
+      ctx.fillStyle = '#f2f4f6';
+      ctx.beginPath(); ctx.ellipse(0, 0, w/2.2, h/2.8, 0, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#c8ccd2';                     // aripi gri
+      ctx.beginPath(); ctx.ellipse(-4, -8+fl2*0.5, 15, 6, -0.4, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#ffb020';
+      ctx.beginPath(); ctx.moveTo(w/2.2, -2); ctx.lineTo(w/2.2+10, 1); ctx.lineTo(w/2.2, 5); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#222';
+      ctx.beginPath(); ctx.arc(w/5, -6, 2.6, 0, Math.PI*2); ctx.fill();
+    } else if (theme === 'scoala') {                        // avion de hârtie ✈️📄
       ctx.fillStyle = '#f6f3ee';
       ctx.beginPath(); ctx.moveTo(w/2, 0); ctx.lineTo(-w/2, -10 + fl*0.4); ctx.lineTo(-w/4, 2); ctx.closePath(); ctx.fill();
       ctx.fillStyle = '#dcd6ca';
@@ -2303,6 +2591,78 @@ function drawEnemy(en) {
       ctx.fillStyle = '#000';
       ctx.beginPath(); ctx.arc(w/5+1, -6, 2.5, 0, Math.PI*2); ctx.fill();
     }
+    ctx.restore();
+  } else if (theme === 'munte') {                    // vulpe 🦊
+    const d = en.vx < 0 ? -1 : 1;
+    ctx.save();
+    ctx.translate(x+w/2, y+h);
+    ctx.scale(d, 1);
+    ctx.fillStyle = '#d86a28';
+    ctx.beginPath(); ctx.ellipse(0, -h/2.6, w/2, h/3, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(w/3, -h/1.7, 10, 8, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(w/3-8, -h/1.7-5); ctx.lineTo(w/3-4, -h/1.7-16); ctx.lineTo(w/3, -h/1.7-6); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(w/3+2, -h/1.7-6); ctx.lineTo(w/3+6, -h/1.7-16); ctx.lineTo(w/3+9, -h/1.7-5); ctx.closePath(); ctx.fill();
+    // coadă stufoasă cu vârf alb
+    ctx.fillStyle = '#d86a28';
+    ctx.beginPath(); ctx.ellipse(-w/2-6, -h/2.2 + wob, 14, 7, -0.4, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.ellipse(-w/2-14, -h/1.9 + wob, 6, 5, -0.4, 0, Math.PI*2); ctx.fill();
+    // botic alb + ochi
+    ctx.beginPath(); ctx.ellipse(w/3+7, -h/1.75, 5, 4, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#222';
+    ctx.beginPath(); ctx.arc(w/3+11, -h/1.75, 1.8, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(w/3+2, -h/1.7-2, 2.2, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  } else if (theme === 'parc') {                     // veveriță 🐿️
+    const d = en.vx < 0 ? -1 : 1;
+    ctx.save();
+    ctx.translate(x+w/2, y+h);
+    ctx.scale(d, 1);
+    // coadă mare pufoasă
+    ctx.fillStyle = '#a85a28';
+    ctx.beginPath(); ctx.ellipse(-w/2+2, -h/1.5 + wob, 11, 20, 0.35, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#c87838';
+    ctx.beginPath(); ctx.ellipse(-w/2+4, -h/1.5 + wob, 6, 13, 0.35, 0, Math.PI*2); ctx.fill();
+    // corp + cap
+    ctx.fillStyle = '#b8682e';
+    ctx.beginPath(); ctx.ellipse(2, -h/2.8, w/2.6, h/3.2, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(w/3, -h/1.8, 9, 8, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(w/3-6, -h/1.8-5); ctx.lineTo(w/3-3, -h/1.8-13); ctx.lineTo(w/3+1, -h/1.8-5); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#e8c8a0';                       // burtă
+    ctx.beginPath(); ctx.ellipse(4, -h/3.2, w/4.5, h/4.5, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#222';
+    ctx.beginPath(); ctx.arc(w/3+3, -h/1.8-1, 2.2, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#6a3a1a';                       // alună în lăbuțe 🌰
+    ctx.beginPath(); ctx.arc(w/3+4, -h/2.6, 4, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  } else if (theme === 'plaja') {                    // crab 🦀
+    const d = en.vx < 0 ? -1 : 1;
+    ctx.save();
+    ctx.translate(x+w/2, y+h);
+    ctx.scale(d, 1);
+    // piciorușe
+    ctx.strokeStyle = '#c83a2a'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    for (let l2 = 0; l2 < 3; l2++) {
+      const lx = -10 + l2*10, sw2 = Math.sin(en.anim*3 + l2) * 3;
+      ctx.beginPath(); ctx.moveTo(lx, -h/3); ctx.lineTo(lx - 8, -2 + sw2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(lx + 4, -h/3); ctx.lineTo(lx + 13, -2 - sw2); ctx.stroke();
+    }
+    // corp
+    ctx.fillStyle = '#e8452a';
+    ctx.beginPath(); ctx.ellipse(0, -h/2.4, w/2.1, h/3, 0, 0, Math.PI*2); ctx.fill();
+    // clești
+    ctx.fillStyle = '#c83a2a';
+    ctx.beginPath(); ctx.arc(-w/2-4, -h/2 + wob, 7, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(w/2+4, -h/2 - wob, 7, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#e8452a';
+    ctx.beginPath(); ctx.moveTo(-w/2-8, -h/2-6 + wob); ctx.lineTo(-w/2-2, -h/2 + wob); ctx.lineTo(-w/2-10, -h/2+2 + wob); ctx.closePath(); ctx.fill();
+    // ochi pe tije
+    ctx.strokeStyle = '#222'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-6, -h/1.6); ctx.lineTo(-8, -h/1.3); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(6, -h/1.6); ctx.lineTo(8, -h/1.3); ctx.stroke();
+    ctx.fillStyle = '#222';
+    ctx.beginPath(); ctx.arc(-8, -h/1.3, 3, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(8, -h/1.3, 3, 0, Math.PI*2); ctx.fill();
     ctx.restore();
   } else if (theme === 'strada') {                   // pisică vagaboandă 🐱
     const d = en.vx < 0 ? -1 : 1;
@@ -2363,7 +2723,150 @@ function drawBoss() {
   if (boss.kind === 'boo') return drawBoo();
   if (boss.kind === 'dog') return drawDogBoss();
   if (boss.kind === 'ghiozdan') return drawBackpackBoss();
+  if (boss.kind === 'urs') return drawBearBoss();
+  if (boss.kind === 'albina') return drawBeeBoss();
+  if (boss.kind === 'rechin') return drawSharkBoss();
   drawBalaur();
+}
+
+/* Ursul Brun 🐻 — se ridică pe două labe */
+function drawBearBoss() {
+  const b = boss, x = b.x, y = b.y, w = b.w, h = b.h;
+  const flash = b.invT > 0 && Math.floor(time*14)%2===0;
+  const wob = Math.sin(b.anim) * 3;
+  const d = b.vx < 0 ? -1 : 1;
+  ctx.save();
+  ctx.translate(x + w/2, y + h);
+  ctx.scale(d, 1);
+  const fur = flash ? '#fff' : '#6a4a2a';
+  const furL = flash ? '#eee' : '#8a643a';
+  // labe jos
+  ctx.fillStyle = fur;
+  ctx.beginPath(); ctx.ellipse(-w/4, -12, 19, 14, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(w/4, -12, 19, 14, 0, 0, Math.PI*2); ctx.fill();
+  // corp masiv ridicat
+  ctx.beginPath(); ctx.ellipse(0, -h/2+4, w/2 - 10, h/2 - 8, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = furL;   // burtă
+  ctx.beginPath(); ctx.ellipse(2, -h/2+14, w/3.4, h/2.8, 0, 0, Math.PI*2); ctx.fill();
+  // brațe ridicate amenințător cu gheare
+  ctx.fillStyle = fur;
+  ctx.beginPath(); ctx.ellipse(-w/2+6, -h+30 + (wob>0?-4:4), 15, 30, 0.5, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(w/2-6, -h+30 + (wob>0?4:-4), 15, 30, -0.5, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#e8e8e8'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+  for (let g2 = 0; g2 < 3; g2++) {
+    ctx.beginPath(); ctx.moveTo(-w/2 - 4 + g2*5, -h+8); ctx.lineTo(-w/2 - 6 + g2*5, -h+2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(w/2 + 4 - g2*5, -h+8); ctx.lineTo(w/2 + 6 - g2*5, -h+2); ctx.stroke();
+  }
+  // cap cu urechi rotunde
+  ctx.fillStyle = fur;
+  ctx.beginPath(); ctx.ellipse(4, -h+18+wob*0.3, 25, 21, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(-14, -h+2+wob*0.3, 8, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(22, -h+2+wob*0.3, 8, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = furL;
+  ctx.beginPath(); ctx.arc(-14, -h+2+wob*0.3, 4, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(22, -h+2+wob*0.3, 4, 0, Math.PI*2); ctx.fill();
+  // bot
+  ctx.beginPath(); ctx.ellipse(14, -h+26+wob*0.3, 12, 9, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#2c2018';
+  ctx.beginPath(); ctx.arc(20, -h+23+wob*0.3, 4, 0, Math.PI*2); ctx.fill();
+  // gură cu colți
+  ctx.fillStyle = '#4a2818';
+  ctx.beginPath(); ctx.ellipse(14, -h+33+wob*0.3, 8, 4 + Math.abs(Math.sin(time*3))*2, 0, 0, Math.PI); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.moveTo(9, -h+33+wob*0.3); ctx.lineTo(11, -h+38+wob*0.3); ctx.lineTo(13, -h+33+wob*0.3); ctx.closePath(); ctx.fill();
+  // ochi încruntat
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.ellipse(2, -h+13+wob*0.3, 5.5, 6.5, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#5a2810';
+  ctx.beginPath(); ctx.arc(3, -h+15+wob*0.3, 2.8, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#3a2010'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(-6, -h+7+wob*0.3); ctx.lineTo(9, -h+10+wob*0.3); ctx.stroke();
+  ctx.restore();
+}
+
+/* Albina Regină 🐝 — zboară cu coroniță */
+function drawBeeBoss() {
+  const b = boss, x = b.x, y = b.y, w = b.w, h = b.h;
+  const flash = b.invT > 0 && Math.floor(time*14)%2===0;
+  const fl = Math.sin(b.anim * 6) * 8;
+  const d = b.vx < 0 ? -1 : 1;
+  ctx.save();
+  ctx.translate(x + w/2, y + h/2);
+  ctx.scale(d, 1);
+  // aripi mari care bat
+  ctx.fillStyle = 'rgba(210,235,255,.8)';
+  ctx.beginPath(); ctx.ellipse(-8, -h/2 + fl*0.7, 26, 12, -0.5, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(10, -h/2 - fl*0.7, 26, 12, 0.4, 0, Math.PI*2); ctx.fill();
+  // corp cu dungi
+  ctx.fillStyle = flash ? '#fff' : '#ffd23f';
+  ctx.beginPath(); ctx.ellipse(0, 0, w/2 - 6, h/2 - 8, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = flash ? '#ccc' : '#2c2c2c';
+  ctx.fillRect(-w/4 - 8, -h/2 + 12, 13, h - 24);
+  ctx.fillRect(-w/4 + 14, -h/2 + 10, 13, h - 20);
+  // ac mare
+  ctx.beginPath(); ctx.moveTo(-w/2 + 4, -2); ctx.lineTo(-w/2 - 16, 2); ctx.lineTo(-w/2 + 4, 8); ctx.closePath(); ctx.fill();
+  // cap + coroniță de regină
+  ctx.fillStyle = flash ? '#fff' : '#ffd23f';
+  ctx.beginPath(); ctx.ellipse(w/2 - 16, -6, 17, 15, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = flash ? '#fff' : '#e8a800';
+  ctx.beginPath();
+  ctx.moveTo(w/2 - 28, -20); ctx.lineTo(w/2 - 28, -30); ctx.lineTo(w/2 - 22, -24); ctx.lineTo(w/2 - 16, -32);
+  ctx.lineTo(w/2 - 10, -24); ctx.lineTo(w/2 - 4, -30); ctx.lineTo(w/2 - 4, -20);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#e63946';
+  ctx.beginPath(); ctx.arc(w/2 - 16, -25, 2.6, 0, Math.PI*2); ctx.fill();
+  // antene
+  ctx.strokeStyle = '#2c2c2c'; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.moveTo(w/2 - 22, -18); ctx.quadraticCurveTo(w/2 - 28, -34, w/2 - 34, -30); ctx.stroke();
+  // ochi supărat
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.ellipse(w/2 - 12, -8, 5.5, 7, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#222';
+  ctx.beginPath(); ctx.arc(w/2 - 10, -6, 2.8, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#222'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(w/2 - 22, -16); ctx.lineTo(w/2 - 6, -13); ctx.stroke();
+  ctx.restore();
+}
+
+/* Rechinul 🦈 — înoată amenințător jos */
+function drawSharkBoss() {
+  const b = boss, x = b.x, y = b.y, w = b.w, h = b.h;
+  const flash = b.invT > 0 && Math.floor(time*14)%2===0;
+  const wob = Math.sin(b.anim * 1.5) * 3;
+  const d = b.vx < 0 ? -1 : 1;
+  ctx.save();
+  ctx.translate(x + w/2, y + h/2);
+  ctx.scale(d, 1);
+  const body = flash ? '#fff' : '#6a7f96';
+  // coadă
+  ctx.fillStyle = body;
+  ctx.beginPath(); ctx.moveTo(-w/2 + 8, 0); ctx.lineTo(-w/2 - 18, -22 + wob); ctx.lineTo(-w/2 - 10, 0); ctx.lineTo(-w/2 - 18, 16 + wob); ctx.closePath(); ctx.fill();
+  // corp hidrodinamic
+  ctx.beginPath(); ctx.ellipse(0, 0, w/2 - 4, h/2 - 4, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = flash ? '#eee' : '#dce6ee';   // burtă albă
+  ctx.beginPath(); ctx.ellipse(6, 10, w/2.6, h/3.4, 0, 0, Math.PI*2); ctx.fill();
+  // aripioară dorsală mare
+  ctx.fillStyle = body;
+  ctx.beginPath(); ctx.moveTo(-14, -h/2 + 6); ctx.lineTo(4, -h/2 - 26 + wob*0.5); ctx.lineTo(14, -h/2 + 6); ctx.closePath(); ctx.fill();
+  // aripioară laterală
+  ctx.beginPath(); ctx.moveTo(-4, 8); ctx.lineTo(-18, 26); ctx.lineTo(4, 16); ctx.closePath(); ctx.fill();
+  // branhii
+  ctx.strokeStyle = flash ? '#ccc' : '#4a5c70'; ctx.lineWidth = 2;
+  for (let g2 = 0; g2 < 3; g2++) {
+    ctx.beginPath(); ctx.arc(10 + g2*6, -2, 10, -0.5, 0.5); ctx.stroke();
+  }
+  // gură cu dinți triunghiulari 😬
+  ctx.fillStyle = '#4a1a22';
+  ctx.beginPath(); ctx.ellipse(w/2 - 18, 10, 18, 8 + Math.abs(Math.sin(time*4))*3, 0.2, 0, Math.PI); ctx.fill();
+  ctx.fillStyle = '#fff';
+  for (let t2 = 0; t2 < 4; t2++) {
+    const tx2 = w/2 - 30 + t2*8;
+    ctx.beginPath(); ctx.moveTo(tx2, 8); ctx.lineTo(tx2 + 3, 15); ctx.lineTo(tx2 + 6, 8); ctx.closePath(); ctx.fill();
+  }
+  // ochi negru de rechin
+  ctx.fillStyle = '#111';
+  ctx.beginPath(); ctx.arc(w/2 - 26, -8, 4, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
 }
 
 /* Câinele Rex 🐕 — dulău de pază cu zgardă cu țepi */
@@ -2685,7 +3188,8 @@ function drawBalaur() {
 
 function bossEmoji(kind) {
   return kind === 'kong' ? '🦍' : kind === 'bowzer' ? '🐢' : kind === 'boo' ? '👻' :
-         kind === 'dog' ? '🐕' : kind === 'ghiozdan' ? '🎒' : '🐉';
+         kind === 'dog' ? '🐕' : kind === 'ghiozdan' ? '🎒' :
+         kind === 'urs' ? '🐻' : kind === 'albina' ? '🐝' : kind === 'rechin' ? '🦈' : '🐉';
 }
 function bossTitle() {
   const mb = LEVELS[levelIdx] && LEVELS[levelIdx].miniboss;
@@ -2713,11 +3217,17 @@ function drawKid(cx, footY, cfg, h, dir, anim, jumping, wings) {
   if (cfg.mount === 'suv') return drawSuvRider(cx, footY, cfg, h, dir, anim, jumping, wings);
   if (cfg.mount === 'unicorn') {
     if (alt === 'street') return drawBunnyRider(cx, footY, cfg, h, dir, anim, jumping, wings);
+    if (alt === 'munte')  return drawGoatRider(cx, footY, cfg, h, dir, anim, jumping, wings);
+    if (alt === 'parc')   return drawBikeRider(cx, footY, cfg, h, dir, anim, jumping, wings);
+    if (alt === 'plaja')  return drawDolphinRider(cx, footY, cfg, h, dir, anim, jumping, wings);
     return alt ? drawSkaterRider(cx, footY, cfg, h, dir, anim, jumping, wings)
                : drawUnicornRider(cx, footY, cfg, h, dir, anim, jumping, wings);
   }
   if (cfg.mount === 'police') {
     if (alt === 'street') return drawFiretruckRider(cx, footY, cfg, h, dir, anim, jumping, wings);
+    if (alt === 'munte')  return drawAtvRider(cx, footY, cfg, h, dir, anim, jumping, wings);
+    if (alt === 'parc')   return drawSkateRider(cx, footY, cfg, h, dir, anim, jumping, wings);
+    if (alt === 'plaja')  return drawJetskiRider(cx, footY, cfg, h, dir, anim, jumping, wings);
     return alt ? drawScooterRider(cx, footY, cfg, h, dir, anim, jumping, wings)
                : drawPoliceRider(cx, footY, cfg, h, dir, anim, jumping, wings);
   }
@@ -2788,6 +3298,370 @@ function drawSuvRider(cx, footY, cfg, h, dir, anim, jumping, wings) {
   ctx.fillRect(0.9*u, -13.9*u, 0.8*u, 1*u);
   ctx.fillStyle = '#c96b5c';
   ctx.fillRect(0.05*u, -11.7*u, 0.95*u, 0.38*u);
+  ctx.restore();
+}
+
+/* Antonia pe capră de munte 🐐 */
+function drawGoatRider(cx, footY, cfg, h, dir, anim, jumping, wings) {
+  const u = h / 16;
+  const g = jumping ? 1 : Math.sin(anim * Math.PI);
+  ctx.save();
+  ctx.translate(cx, footY);
+  ctx.scale(dir, 1);
+  if (wings) drawMountWings(u, -8*u);
+  const f = jumping ? 1.6 : g, b2 = jumping ? -1.6 : -g;
+  // picioare sprintene
+  ctx.fillStyle = '#e8e4dc';
+  ctx.fillRect(2.2*u + f*0.7*u, -5*u, 1.2*u, 5*u);
+  ctx.fillRect(0.8*u - f*0.5*u, -5*u, 1.2*u, 5*u);
+  ctx.fillRect(-2.6*u + b2*0.5*u, -5*u, 1.2*u, 5*u);
+  ctx.fillRect(-4.2*u - b2*0.6*u, -5*u, 1.2*u, 5*u);
+  ctx.fillStyle = '#3a3f44';   // copite negre
+  ctx.fillRect(2.2*u + f*0.7*u, -1*u, 1.2*u, 1*u);
+  ctx.fillRect(0.8*u - f*0.5*u, -1*u, 1.2*u, 1*u);
+  ctx.fillRect(-2.6*u + b2*0.5*u, -1*u, 1.2*u, 1*u);
+  ctx.fillRect(-4.2*u - b2*0.6*u, -1*u, 1.2*u, 1*u);
+  // corp + codiță
+  ctx.fillStyle = '#e8e4dc';
+  ctx.beginPath(); ctx.ellipse(-0.4*u, -6.6*u, 4.5*u, 2.4*u, 0, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(-4.8*u, -7.6*u, 0.8*u, 0.6*u, 0.6, 0, Math.PI*2); ctx.fill();
+  // gât + cap cu bărbiță
+  ctx.beginPath();
+  ctx.moveTo(2.4*u, -7.5*u); ctx.lineTo(4.2*u, -11.4*u);
+  ctx.lineTo(5.4*u, -10.8*u); ctx.lineTo(4*u, -6.2*u);
+  ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(5*u, -11.2*u, 1.6*u, 1.15*u, -0.15, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(5.4*u, -10.2*u); ctx.lineTo(5.8*u, -9*u); ctx.lineTo(6.2*u, -10.2*u); ctx.closePath(); ctx.fill();   // bărbiță
+  // coarne curbate
+  ctx.strokeStyle = '#8a7a5a'; ctx.lineWidth = 0.55*u; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(4.4*u, -12*u); ctx.quadraticCurveTo(3.6*u, -14*u, 2.6*u, -13.6*u); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(5.2*u, -12.2*u); ctx.quadraticCurveTo(4.6*u, -14.6*u, 3.6*u, -14.4*u); ctx.stroke();
+  ctx.fillStyle = '#333';
+  ctx.beginPath(); ctx.arc(4.9*u, -11.5*u, 0.3*u, 0, Math.PI*2); ctx.fill();
+  // Antonia călare (bentiță + păr blond)
+  ctx.fillStyle = cfg.pants;
+  ctx.fillRect(-0.2*u, -8.2*u, 1.5*u, 3.2*u);
+  ctx.fillStyle = cfg.shoes;
+  ctx.fillRect(-0.35*u, -5.4*u, 1.8*u, 1.1*u);
+  ctx.fillStyle = cfg.shirt;
+  ctx.fillRect(-2.2*u, -13*u, 3.6*u, 4.9*u);
+  ctx.fillRect(0.9*u, -12.6*u, 2.2*u, 1.2*u);
+  ctx.fillStyle = cfg.skin;
+  ctx.fillRect(2.9*u, -12.8*u, 1.2*u, 1.4*u);
+  ctx.fillRect(-2.6*u, -18.2*u, 4.6*u, 5.3*u);
+  ctx.fillStyle = cfg.hairColor;
+  ctx.fillRect(-3.4*u, -18*u, 1.2*u, 7.2*u);
+  ctx.fillRect(-2.9*u, -18.6*u, 5.2*u, 1.6*u);
+  ctx.fillStyle = '#ff8fb5';
+  ctx.fillRect(-2.9*u, -19*u, 5.2*u, 0.8*u);
+  ctx.beginPath(); ctx.moveTo(-2.4*u, -18.8*u); ctx.lineTo(-1.6*u, -20.7*u); ctx.lineTo(-0.6*u, -18.9*u); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(0.6*u, -18.9*u); ctx.lineTo(1.5*u, -20.7*u); ctx.lineTo(2.3*u, -18.8*u); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#222';
+  ctx.fillRect(-0.4*u, -16.4*u, 0.8*u, 1*u);
+  ctx.fillRect(1*u, -16.4*u, 0.8*u, 1*u);
+  ctx.fillStyle = '#c96b5c';
+  ctx.fillRect(0.15*u, -14.4*u, 0.95*u, 0.38*u);
+  ctx.restore();
+}
+
+/* Marc pe ATV de munte 🛺 */
+function drawAtvRider(cx, footY, cfg, h, dir, anim, jumping, wings) {
+  const u = h / 16;
+  const bob = jumping ? -0.4 : Math.sin(anim * 3) * 0.35;
+  ctx.save();
+  ctx.translate(cx, footY + bob*u);
+  ctx.scale(dir, 1);
+  // roți mari cu crampoane
+  for (const wx of [-3.2, 3.2]) {
+    ctx.fillStyle = '#1c1f24';
+    ctx.beginPath(); ctx.arc(wx*u, -1.8*u, 1.8*u, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#3a3f46';
+    for (let k = 0; k < 6; k++) {
+      const a = anim*2 + k*Math.PI/3;
+      ctx.fillRect(wx*u + Math.cos(a)*1.7*u - 0.2*u, -1.8*u + Math.sin(a)*1.7*u - 0.2*u, 0.45*u, 0.45*u);
+    }
+    ctx.fillStyle = '#8a9098';
+    ctx.beginPath(); ctx.arc(wx*u, -1.8*u, 0.6*u, 0, Math.PI*2); ctx.fill();
+  }
+  if (wings) drawMountWings(u, -5*u);
+  // șasiu verde de teren
+  ctx.fillStyle = '#3a7a3a';
+  roundRect(-4.6*u, -5.2*u, 9.2*u, 3*u, 0.8*u); ctx.fill();
+  ctx.fillStyle = '#2a5a2a';
+  ctx.fillRect(-4.6*u, -3*u, 9.2*u, 0.8*u);
+  // ghidon ATV
+  ctx.strokeStyle = '#22262a'; ctx.lineWidth = 0.5*u;
+  ctx.beginPath(); ctx.moveTo(3*u, -4.8*u); ctx.lineTo(3.9*u, -9*u); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(3.1*u, -9.2*u); ctx.lineTo(4.7*u, -9.2*u); ctx.stroke();
+  // far
+  ctx.fillStyle = '#ffe27a';
+  ctx.fillRect(4.2*u, -5*u, 0.6*u, 0.9*u);
+  // Marc pe șa
+  ctx.fillStyle = cfg.pants;
+  ctx.fillRect(-1.4*u, -7.8*u, 1.9*u, 3*u);
+  ctx.fillStyle = cfg.shoes;
+  ctx.fillRect(-1.6*u, -5.2*u, 2.3*u, 1*u);
+  ctx.fillStyle = cfg.shirt;
+  ctx.fillRect(-2*u, -11.6*u, 3.8*u, 4.2*u);
+  ctx.fillRect(1.4*u, -11.2*u, 2*u, 1.1*u);
+  ctx.fillStyle = cfg.skin;
+  ctx.fillRect(3.2*u, -11.4*u, 1.1*u, 1.3*u);
+  // cap cu cască verde de teren
+  ctx.fillStyle = cfg.skin;
+  ctx.fillRect(-2.2*u, -16.4*u, 4.6*u, 4.9*u);
+  ctx.fillStyle = '#3a7a3a';
+  ctx.beginPath(); ctx.ellipse(0.1*u, -16.2*u, 2.9*u, 1.8*u, 0, Math.PI, 0); ctx.fill();
+  ctx.fillRect(-2.7*u, -16.5*u, 5.6*u, 0.7*u);
+  ctx.fillStyle = '#222';
+  ctx.fillRect(-0.2*u, -14.8*u, 0.8*u, 1*u);
+  ctx.fillRect(1.3*u, -14.8*u, 0.8*u, 1*u);
+  ctx.strokeStyle = '#3a3f44'; ctx.lineWidth = 0.3*u;
+  ctx.beginPath(); ctx.arc(0.2*u, -14.4*u, 0.95*u, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(1.7*u, -14.4*u, 0.95*u, 0, Math.PI*2); ctx.stroke();
+  ctx.fillStyle = '#c96b5c';
+  ctx.fillRect(0.4*u, -12.4*u, 0.95*u, 0.38*u);
+  ctx.restore();
+}
+
+/* Antonia pe bicicletă roz 🚲 */
+function drawBikeRider(cx, footY, cfg, h, dir, anim, jumping, wings) {
+  const u = h / 16;
+  const ped = anim * 3;   // pedalare
+  ctx.save();
+  ctx.translate(cx, footY);
+  ctx.scale(dir, 1);
+  if (wings) drawMountWings(u, -7*u);
+  // roți cu spițe
+  for (const wx of [-3.2, 3.4]) {
+    ctx.strokeStyle = '#22262a'; ctx.lineWidth = 0.45*u;
+    ctx.beginPath(); ctx.arc(wx*u, -2.2*u, 2.2*u, 0, Math.PI*2); ctx.stroke();
+    ctx.strokeStyle = '#9aa3ab'; ctx.lineWidth = 0.18*u;
+    for (let k = 0; k < 4; k++) {
+      const a = ped + k*Math.PI/4;
+      ctx.beginPath();
+      ctx.moveTo(wx*u - Math.cos(a)*2*u, -2.2*u - Math.sin(a)*2*u);
+      ctx.lineTo(wx*u + Math.cos(a)*2*u, -2.2*u + Math.sin(a)*2*u);
+      ctx.stroke();
+    }
+  }
+  // cadru roz
+  ctx.strokeStyle = '#ff6aa8'; ctx.lineWidth = 0.55*u; ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-3.2*u, -2.2*u); ctx.lineTo(-0.4*u, -6.2*u); ctx.lineTo(3*u, -6*u);
+  ctx.moveTo(-0.4*u, -6.2*u); ctx.lineTo(0.3*u, -2.6*u); ctx.lineTo(-3.2*u, -2.2*u);
+  ctx.moveTo(0.3*u, -2.6*u); ctx.lineTo(3.4*u, -2.2*u);
+  ctx.stroke();
+  // ghidon + șa
+  ctx.strokeStyle = '#22262a'; ctx.lineWidth = 0.45*u;
+  ctx.beginPath(); ctx.moveTo(3.2*u, -6.2*u); ctx.lineTo(3.4*u, -8.6*u); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(2.6*u, -8.7*u); ctx.lineTo(4.2*u, -8.7*u); ctx.stroke();
+  ctx.fillStyle = '#5a2a3a';
+  ctx.fillRect(-1.4*u, -6.9*u, 1.9*u, 0.6*u);   // șa
+  // pedale care se învârt
+  const px2 = 0.3*u + Math.cos(ped)*0.9*u, py2 = -2.6*u + Math.sin(ped)*0.9*u;
+  ctx.fillStyle = '#3a3f44';
+  ctx.fillRect(px2 - 0.5*u, py2 - 0.25*u, 1*u, 0.5*u);
+  // coșuleț cu floricele 🌼
+  ctx.fillStyle = '#c89a5a';
+  roundRect(3.6*u, -7.8*u, 1.9*u, 1.4*u, 0.3*u); ctx.fill();
+  ctx.fillStyle = '#ffd23f';
+  ctx.beginPath(); ctx.arc(4.2*u, -8*u, 0.35*u, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#ff8fb5';
+  ctx.beginPath(); ctx.arc(4.9*u, -8.1*u, 0.35*u, 0, Math.PI*2); ctx.fill();
+  // Antonia pe șa, picior pe pedală
+  ctx.fillStyle = cfg.pants;
+  ctx.fillRect(-1.2*u, -6.8*u, 1.4*u, 2.6*u);
+  ctx.fillStyle = cfg.shoes;
+  ctx.fillRect(px2 - 0.8*u, py2 - 0.8*u, 1.6*u, 0.8*u);
+  ctx.fillStyle = cfg.shirt;
+  ctx.fillRect(-1.8*u, -11.6*u, 3.4*u, 4.9*u);
+  ctx.fillRect(1*u, -11.2*u, 2*u, 1.1*u);
+  ctx.fillStyle = cfg.skin;
+  ctx.fillRect(2.8*u, -11.4*u, 1.1*u, 1.3*u);
+  ctx.fillRect(-2.3*u, -16.8*u, 4.6*u, 5.3*u);
+  ctx.fillStyle = cfg.hairColor;
+  ctx.fillRect(-3.1*u, -16.6*u, 1.2*u, 7*u);
+  ctx.fillRect(-2.6*u, -17.2*u, 5.2*u, 1.6*u);
+  ctx.fillStyle = '#ff8fb5';
+  ctx.fillRect(-2.6*u, -17.6*u, 5.2*u, 0.8*u);
+  ctx.beginPath(); ctx.moveTo(-2.1*u, -17.4*u); ctx.lineTo(-1.3*u, -19.3*u); ctx.lineTo(-0.3*u, -17.5*u); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(0.9*u, -17.5*u); ctx.lineTo(1.8*u, -19.3*u); ctx.lineTo(2.6*u, -17.4*u); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#222';
+  ctx.fillRect(-0.1*u, -15*u, 0.8*u, 1*u);
+  ctx.fillRect(1.3*u, -15*u, 0.8*u, 1*u);
+  ctx.fillStyle = '#c96b5c';
+  ctx.fillRect(0.45*u, -13*u, 0.95*u, 0.38*u);
+  ctx.restore();
+}
+
+/* Marc pe skateboard 🛹 */
+function drawSkateRider(cx, footY, cfg, h, dir, anim, jumping, wings) {
+  const u = h / 16;
+  const lean = jumping ? -0.15 : Math.sin(anim * 2) * 0.05;
+  ctx.save();
+  ctx.translate(cx, footY);
+  ctx.rotate(lean * dir);
+  ctx.scale(dir, 1);
+  if (wings) drawMountWings(u, -8*u);
+  // rotile
+  ctx.fillStyle = '#ffb020';
+  ctx.beginPath(); ctx.arc(-2*u, -0.6*u, 0.6*u, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(2.2*u, -0.6*u, 0.6*u, 0, Math.PI*2); ctx.fill();
+  // placă cu vârfuri ridicate
+  ctx.strokeStyle = '#3a8ad8'; ctx.lineWidth = 0.65*u; ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-3.4*u, -2.2*u); ctx.quadraticCurveTo(-3*u, -1.5*u, -2.4*u, -1.5*u);
+  ctx.lineTo(2.6*u, -1.5*u); ctx.quadraticCurveTo(3.2*u, -1.5*u, 3.6*u, -2.2*u);
+  ctx.stroke();
+  // Marc cu picioarele pe placă, brațe întinse
+  ctx.fillStyle = cfg.pants;
+  ctx.fillRect(-1.9*u, -5.2*u, 1.8*u, 3.6*u);
+  ctx.fillRect(0.6*u, -5*u, 1.8*u, 3.4*u);
+  ctx.fillStyle = cfg.shoes;
+  ctx.fillRect(-2.1*u, -2.4*u, 2.3*u, 0.9*u);
+  ctx.fillRect(0.4*u, -2.3*u, 2.3*u, 0.9*u);
+  ctx.fillStyle = cfg.shirt;
+  ctx.fillRect(-2.2*u, -10.6*u, 4.4*u, 5.6*u);
+  ctx.fillRect(2*u, -10.4*u, 2.3*u, 1.1*u);   // braț de echilibru
+  ctx.fillRect(-3.9*u, -9.6*u, 1.9*u, 1.1*u);
+  ctx.fillStyle = cfg.skin;
+  ctx.fillRect(4.2*u, -10.5*u, 1.1*u, 1.2*u);
+  ctx.fillRect(-4.6*u, -9.7*u, 1*u, 1.2*u);
+  // cap cu păr ciufulit + ochelari
+  ctx.fillStyle = cfg.skin;
+  ctx.fillRect(-2.2*u, -15.8*u, 4.6*u, 5.2*u);
+  ctx.fillStyle = cfg.hairColor;
+  ctx.fillRect(-2.5*u, -16.4*u, 5.4*u, 1.8*u);
+  ctx.fillRect(-2.1*u, -17.1*u, 1.3*u, 1*u);
+  ctx.fillRect(0, -17.4*u, 1.4*u, 1.4*u);
+  ctx.fillRect(1.7*u, -17*u, 1.1*u, 1*u);
+  ctx.fillStyle = '#222';
+  ctx.fillRect(-0.1*u, -14*u, 0.8*u, 1*u);
+  ctx.fillRect(1.4*u, -14*u, 0.8*u, 1*u);
+  ctx.strokeStyle = '#3a3f44'; ctx.lineWidth = 0.3*u;
+  ctx.beginPath(); ctx.arc(0.3*u, -13.6*u, 1*u, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(1.8*u, -13.6*u, 1*u, 0, Math.PI*2); ctx.stroke();
+  ctx.fillStyle = '#c96b5c';
+  ctx.fillRect(0.5*u, -11.7*u, 0.95*u, 0.38*u);
+  ctx.restore();
+}
+
+/* Antonia pe delfin 🐬 */
+function drawDolphinRider(cx, footY, cfg, h, dir, anim, jumping, wings) {
+  const u = h / 16;
+  const arc2 = jumping ? -0.18 : Math.sin(anim * 1.5) * 0.08;
+  ctx.save();
+  ctx.translate(cx, footY);
+  ctx.rotate(arc2 * dir);
+  ctx.scale(dir, 1);
+  if (wings) drawMountWings(u, -8*u);
+  // stropi de apă în urmă 💦
+  ctx.fillStyle = 'rgba(150,220,255,.7)';
+  for (let s2 = 0; s2 < 3; s2++) {
+    const sp2 = (time*3 + s2*0.4) % 1;
+    ctx.beginPath(); ctx.arc(-5*u - sp2*2.5*u, -1.5*u - sp2*2*u, (0.5 - sp2*0.3)*u, 0, Math.PI*2); ctx.fill();
+  }
+  // corp delfin
+  ctx.fillStyle = '#5a9ac8';
+  ctx.beginPath(); ctx.ellipse(0, -3.4*u, 5.4*u, 2.3*u, -0.08, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#cfe6f5';   // burtă
+  ctx.beginPath(); ctx.ellipse(0.6*u, -2.4*u, 4*u, 1.2*u, -0.08, 0, Math.PI*2); ctx.fill();
+  // coadă
+  ctx.fillStyle = '#5a9ac8';
+  ctx.beginPath(); ctx.moveTo(-4.8*u, -3.6*u);
+  ctx.lineTo(-6.8*u, -5.4*u + Math.sin(time*8)*0.6*u); ctx.lineTo(-6*u, -3.2*u);
+  ctx.lineTo(-6.8*u, -1.4*u + Math.sin(time*8)*0.6*u);
+  ctx.closePath(); ctx.fill();
+  // aripioară dorsală + bot zâmbitor
+  ctx.beginPath(); ctx.moveTo(-1.4*u, -5.4*u); ctx.quadraticCurveTo(-0.4*u, -7.4*u, 1*u, -5.5*u); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(5.6*u, -3.8*u, 1.3*u, 0.7*u, 0.1, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#2c5a80'; ctx.lineWidth = 0.22*u;
+  ctx.beginPath(); ctx.arc(5.4*u, -3.4*u, 0.8*u, 0.2, 1.4); ctx.stroke();   // zâmbet
+  ctx.fillStyle = '#222';
+  ctx.beginPath(); ctx.arc(4.2*u, -4.4*u, 0.32*u, 0, Math.PI*2); ctx.fill();
+  // Antonia călare
+  ctx.fillStyle = cfg.pants;
+  ctx.fillRect(-0.6*u, -6.6*u, 1.5*u, 3*u);
+  ctx.fillStyle = cfg.shoes;
+  ctx.fillRect(-0.75*u, -4*u, 1.8*u, 1*u);
+  ctx.fillStyle = cfg.shirt;
+  ctx.fillRect(-2.4*u, -11.2*u, 3.6*u, 4.8*u);
+  ctx.fillRect(0.7*u, -10.8*u, 2*u, 1.2*u);
+  ctx.fillStyle = cfg.skin;
+  ctx.fillRect(2.5*u, -11*u, 1.2*u, 1.4*u);
+  ctx.fillRect(-2.8*u, -16.4*u, 4.6*u, 5.3*u);
+  ctx.fillStyle = cfg.hairColor;
+  ctx.fillRect(-3.6*u, -16.2*u, 1.2*u, 7*u);
+  ctx.fillRect(-3.1*u, -16.8*u, 5.2*u, 1.6*u);
+  ctx.fillStyle = '#ff8fb5';
+  ctx.fillRect(-3.1*u, -17.2*u, 5.2*u, 0.8*u);
+  ctx.beginPath(); ctx.moveTo(-2.6*u, -17*u); ctx.lineTo(-1.8*u, -18.9*u); ctx.lineTo(-0.8*u, -17.1*u); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(0.4*u, -17.1*u); ctx.lineTo(1.3*u, -18.9*u); ctx.lineTo(2.1*u, -17*u); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#222';
+  ctx.fillRect(-0.6*u, -14.6*u, 0.8*u, 1*u);
+  ctx.fillRect(0.8*u, -14.6*u, 0.8*u, 1*u);
+  ctx.fillStyle = '#c96b5c';
+  ctx.fillRect(-0.05*u, -12.6*u, 0.95*u, 0.38*u);
+  ctx.restore();
+}
+
+/* Marc pe skijet 🌊 */
+function drawJetskiRider(cx, footY, cfg, h, dir, anim, jumping, wings) {
+  const u = h / 16;
+  const bob = jumping ? -0.4 : Math.sin(anim * 2.5) * 0.4;
+  ctx.save();
+  ctx.translate(cx, footY + bob*u);
+  ctx.scale(dir, 1);
+  if (wings) drawMountWings(u, -5*u);
+  // jet de apă în spate 💦
+  ctx.fillStyle = 'rgba(150,220,255,.75)';
+  for (let s2 = 0; s2 < 4; s2++) {
+    const sp2 = (time*4 + s2*0.3) % 1;
+    ctx.beginPath(); ctx.arc(-5.4*u - sp2*3*u, -2*u + (s2%2)*0.8*u - sp2*1.5*u, (0.6 - sp2*0.35)*u, 0, Math.PI*2); ctx.fill();
+  }
+  // cocă albă cu dungă turcoaz
+  ctx.fillStyle = '#f2f4f6';
+  ctx.beginPath();
+  ctx.moveTo(-5*u, -2*u); ctx.quadraticCurveTo(-5.6*u, -4.2*u, -3.6*u, -4.4*u);
+  ctx.lineTo(3.4*u, -4.6*u); ctx.quadraticCurveTo(6*u, -4.4*u, 6.2*u, -3*u);
+  ctx.lineTo(5.6*u, -1.4*u); ctx.lineTo(-4.4*u, -1.2*u);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#1fa8c8';
+  ctx.fillRect(-4.6*u, -2.6*u, 10.4*u, 0.9*u);
+  // șa + ghidon
+  ctx.fillStyle = '#2c2f36';
+  roundRect(-2.6*u, -5.6*u, 4*u, 1.3*u, 0.4*u); ctx.fill();
+  ctx.strokeStyle = '#22262a'; ctx.lineWidth = 0.5*u;
+  ctx.beginPath(); ctx.moveTo(3.4*u, -4.6*u); ctx.lineTo(4*u, -8.4*u); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(3.2*u, -8.6*u); ctx.lineTo(4.8*u, -8.6*u); ctx.stroke();
+  // Marc cu vestă de salvare portocalie
+  ctx.fillStyle = cfg.pants;
+  ctx.fillRect(-1.6*u, -8*u, 1.9*u, 2.8*u);
+  ctx.fillStyle = '#ff9f1c';   // vestă
+  ctx.fillRect(-2*u, -11.8*u, 3.8*u, 4.2*u);
+  ctx.fillStyle = cfg.shirt;
+  ctx.fillRect(1.4*u, -11.4*u, 2*u, 1.1*u);
+  ctx.fillStyle = '#e8811c';
+  ctx.fillRect(-1.2*u, -11.8*u, 0.7*u, 4.2*u);
+  ctx.fillRect(0.6*u, -11.8*u, 0.7*u, 4.2*u);
+  ctx.fillStyle = cfg.skin;
+  ctx.fillRect(3.2*u, -11.6*u, 1.1*u, 1.3*u);
+  // cap + păr ciufulit + ochelari
+  ctx.fillStyle = cfg.skin;
+  ctx.fillRect(-2.2*u, -16.6*u, 4.6*u, 5*u);
+  ctx.fillStyle = cfg.hairColor;
+  ctx.fillRect(-2.5*u, -17.2*u, 5.4*u, 1.8*u);
+  ctx.fillRect(-2.1*u, -17.9*u, 1.3*u, 1*u);
+  ctx.fillRect(0, -18.2*u, 1.4*u, 1.4*u);
+  ctx.fillRect(1.7*u, -17.8*u, 1.1*u, 1*u);
+  ctx.fillStyle = '#222';
+  ctx.fillRect(-0.1*u, -14.9*u, 0.8*u, 1*u);
+  ctx.fillRect(1.4*u, -14.9*u, 0.8*u, 1*u);
+  ctx.strokeStyle = '#3a3f44'; ctx.lineWidth = 0.3*u;
+  ctx.beginPath(); ctx.arc(0.3*u, -14.5*u, 1*u, 0, Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(1.8*u, -14.5*u, 1*u, 0, Math.PI*2); ctx.stroke();
+  ctx.fillStyle = '#c96b5c';
+  ctx.fillRect(0.5*u, -12.6*u, 0.95*u, 0.38*u);
   ctx.restore();
 }
 
