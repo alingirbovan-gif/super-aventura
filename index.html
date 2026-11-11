@@ -2,12 +2,15 @@
 <html lang="ro">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#1a1a2e">
-<link rel="manifest" href='data:application/manifest+json,{"name":"Super Aventura","short_name":"Super Aventura","display":"fullscreen","orientation":"landscape","background_color":"%231a1a2e","theme_color":"%231a1a2e","start_url":"."}'>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-title" content="Super Aventura">
 <title>Super Aventura</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
@@ -54,6 +57,19 @@
   .pinActBtn:active { background:#555c6a; }
   #pinActReset { background:#5a2a2a; }
   #pinActReset:active { background:#7a3a3a; }
+  #btnIN { position:fixed; top:2vh; right:calc(2vw + 108px); height:44px; padding:0 14px; border-radius:22px;
+    background:rgba(40,160,70,.85); color:#fff; font:bold 16px 'Segoe UI', Arial; display:flex; align-items:center;
+    gap:6px; user-select:none; -webkit-user-select:none; z-index:11; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.35); }
+  #btnIN.hide { display:none; }
+  #instModal { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:21; display:none; align-items:center; justify-content:center; }
+  #instModal.open { display:flex; }
+  #instBox { background:#22262e; color:#fff; border-radius:16px; padding:20px 24px; max-width:min(460px, 92vw);
+    max-height:90vh; overflow:auto; font:16px 'Segoe UI', Arial; line-height:1.45; box-shadow:0 10px 40px rgba(0,0,0,.5); }
+  #instBox h3 { font-size:20px; margin-bottom:10px; }
+  #instBox ol { padding-left:22px; margin:8px 0 14px; }
+  #instBox li { margin:6px 0; }
+  #instBox .ico { display:inline-block; background:#3a3f4a; border-radius:6px; padding:0 6px; }
+  #instClose { width:100%; padding:12px; border:none; border-radius:10px; background:#3a8a4a; color:#fff; font:bold 16px 'Segoe UI', Arial; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -65,6 +81,8 @@
 <div id="btnM">🔊</div>
 <div id="btnFS">⛶</div>
 <div id="btnPIN" title="testare">🔢</div>
+<div id="btnIN" class="hide">📲 Instalează</div>
+<div id="instModal"><div id="instBox"><h3>📲 Instalează jocul</h3><div id="instText"></div><button id="instClose">Am înțeles</button></div></div>
 <div id="pinModal">
   <div id="pinBox">
     <div id="pinDisplay"></div>
@@ -663,6 +681,31 @@ btnFSEl.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropaga
 addEventListener('fullscreenchange', () => {
   btnFSEl.textContent = document.fullscreenElement ? '🡴' : '⛶';
 });
+
+/* ================= Instalare (PWA) ================= */
+(function(){
+  const btn = document.getElementById('btnIN'), modal = document.getElementById('instModal'), txt = document.getElementById('instText');
+  const ua = navigator.userAgent || '';
+  const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const standalone = () => (window.matchMedia && (matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches)) || navigator.standalone === true;
+  let deferred = null;
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  if (!standalone()) btn.classList.remove('hide');
+  addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferred = e; if (!standalone()) btn.classList.remove('hide'); });
+  addEventListener('appinstalled', () => { btn.classList.add('hide'); deferred = null; });
+  function show(html){ txt.innerHTML = html; modal.classList.add('open'); }
+  btn.addEventListener('pointerdown', async e => {
+    e.preventDefault(); e.stopPropagation();
+    if (deferred) { deferred.prompt(); try { await deferred.userChoice; } catch(_){} deferred = null; return; }
+    if (isIOS) show('<p>Pe iPhone și iPad, jocul se instalează din meniul de partajare:</p><ol>'
+      + '<li>Apasă butonul <b>Partajare</b> <span class="ico">⬆️</span> (pătratul cu săgeată în sus). În Safari e jos sau lângă adresă; în Chrome e sus, lângă adresă.</li>'
+      + '<li>Derulează și alege <b>„Adaugă pe ecranul principal”</b> (Add to Home Screen).</li>'
+      + '<li>Apasă <b>Adaugă</b>. Jocul apare cu iconița lui și pornește pe tot ecranul.</li></ol>');
+    else show('<p>Deschide meniul browserului <span class="ico">⋮</span> și alege <b>„Instalează aplicația”</b> sau <b>„Adaugă pe ecranul de pornire”</b>.</p>');
+  });
+  document.getElementById('instClose').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); modal.classList.remove('open'); });
+  modal.addEventListener('pointerdown', e => { if (e.target === modal) { e.stopPropagation(); modal.classList.remove('open'); } });
+})();
 
 /* ================= PIN testare (god mode → sare la final) ================= */
 let godMode = false;
