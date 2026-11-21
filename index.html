@@ -37,6 +37,9 @@
   #btnPIN { position:fixed; top:2vh; left:2vw; width:44px; height:44px; border-radius:50%;
     background:rgba(0,0,0,.35); color:#fff; font-size:20px; display:flex; align-items:center;
     justify-content:center; user-select:none; -webkit-user-select:none; z-index:11; cursor:pointer; }
+  #btnHome { position:fixed; top:2vh; left:calc(2vw + 54px); width:44px; height:44px; border-radius:50%;
+    background:rgba(0,0,0,.35); color:#fff; font-size:20px; display:none; align-items:center;
+    justify-content:center; user-select:none; -webkit-user-select:none; z-index:11; cursor:pointer; }
   #pinModal { position:fixed; inset:0; background:rgba(0,0,0,.65); z-index:20; display:none;
     align-items:center; justify-content:center; }
   #pinModal.open { display:flex; }
@@ -81,6 +84,7 @@
 <div id="btnM">🔊</div>
 <div id="btnFS">⛶</div>
 <div id="btnPIN" title="testare">🔢</div>
+<div id="btnHome" title="Înapoi la personaje">🏠</div>
 <div id="btnIN" class="hide">📲 Instalează</div>
 <div id="instModal"><div id="instBox"><h3>📲 Instalează jocul</h3><div id="instText"></div><button id="instClose">Am înțeles</button></div></div>
 <div id="pinModal">
@@ -882,6 +886,8 @@ addEventListener('keydown', e => {
   if (!keys[k] && (k===' '||k==='arrowup'||k==='w')) jumpBufferT = JUMP_BUFFER;
   if (!keys[k] && (k==='x'||k==='control')) shootFireball();   // X sau Ctrl = bilă de foc
   keys[k] = true;
+  if (!e.repeat && (k === 'escape' || k === 'p')) { menuBack(); return; }
+  if (state === 'pause') { if (e.key === 'Enter' || e.key === ' ') resumeGame(); return; }
   handleMenuKey(e.key);
 });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
@@ -894,6 +900,7 @@ function inputJumpHeld() { return keys[' '] || keys['arrowup'] || keys['w'] || t
    Stick stânga sau D-pad = mers; A = sărit / alege; X sau RB = bilă de foc; Start = alege. */
 const gpState = { L:false, R:false, J:false };
 const gpPrev = {};
+let gpSeen = false;
 function pollGamepad() {
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
   let gp = null;
@@ -906,14 +913,26 @@ function pollGamepad() {
     R: b(15) || ax > 0.4,
     J: b(0) || b(12),
     F: b(2) || b(5),
-    OK: b(0) || b(9),
+    OK: b(0),
+    M: b(9),                  // ☰ Meniu = pauză / înapoi
+    V: b(8),                  // ⧉ View = direct la alegerea personajelor 🏠
   };
-  const edge = k => cur[k] && !gpPrev[k];
-  if (edge('L') || edge('R') || edge('OK') || edge('J') || edge('F')) {
+  if (!gpSeen) {                  // prima citire: butonul ținut apăsat la deschiderea paginii nu contează ca apăsare
+    gpSeen = true; Object.assign(gpPrev, cur); gpPrev.Y = b(3); return;
+  }
+  const selGuard = state === 'select' && stateTimer < 0.5;    // nu alege personajul din greșeală imediat ce apare ecranul
+  const edge = k => cur[k] && !gpPrev[k] && !(k === 'OK' && selGuard);
+  if (edge('L') || edge('R') || edge('OK') || edge('J') || edge('F') || edge('M') || edge('V')) {
     audio();
     document.body.classList.remove('touch');   // cu controller nu mai arătăm butoanele de pe ecran (revin la o atingere reală)
+    trapBack();
   }
-  if (state === 'play') {
+  if (edge('V')) { if (state !== 'select') backToSelect(); }
+  else if (edge('M')) { menuBack(); }
+  else if (state === 'pause') {
+    if (edge('OK')) resumeGame();
+    if (b(3) && !gpPrev.Y) location.reload();   // Y = reîncarcă jocul (reset)
+  } else if (state === 'play') {
     if (edge('J')) jumpBufferT = JUMP_BUFFER;
     if (edge('F')) shootFireball();
   } else {
@@ -923,7 +942,40 @@ function pollGamepad() {
   }
   gpState.L = cur.L; gpState.R = cur.R; gpState.J = cur.J;
   Object.assign(gpPrev, cur);
+  gpPrev.Y = b(3);
 }
+
+/* ===== PAUZĂ / ÎNAPOI ⏸️ =====
+   ☰ Meniu (sau Esc / P): în joc → pauză; în pauză → înapoi la alegerea personajului. A / Enter = continuă.
+   Cu controllerul, B („înapoi" în browser): în joc → pauză; din pauză sau din alegerea personajelor → iese de-adevăratelea.
+   În pauză, Y = reîncarcă jocul (reset). */
+function pauseGame()  { if (state === 'play') { state = 'pause'; stateTimer = 0; } }
+function resumeGame() { if (state === 'pause') state = 'play'; }
+function backToSelect() {
+  saveRecord(); stopMusic();
+  state = 'select'; stateTimer = 0; score = 0; lives = LIVES_START; levelIdx = 0; helper = null;
+}
+const btnHomeEl = document.getElementById('btnHome');
+btnHomeEl.addEventListener('pointerdown', e => {
+  e.preventDefault(); e.stopPropagation();
+  if (state !== 'select') backToSelect();
+});
+function menuBack() {
+  if (state === 'play') pauseGame();
+  else if (state === 'pause') backToSelect();
+}
+let backTrapped = false;
+function trapBack() {            // doar după ce s-a folosit controllerul (pe telefon „înapoi" merge normal)
+  if (backTrapped || !history.pushState) return;
+  backTrapped = true;
+  history.pushState({ sa: 1 }, '');
+}
+addEventListener('popstate', () => {
+  if (!backTrapped) return;
+  if (state === 'play') { history.pushState({ sa: 1 }, ''); pauseGame(); return; }
+  backTrapped = false;            // din pauză / meniu: B iese din joc de-adevăratelea
+  history.back();
+});
 
 const touchState = { L:false, R:false, J:false };
 if ('ontouchstart' in window || navigator.maxTouchPoints > 0) document.body.classList.add('touch');
@@ -962,6 +1014,7 @@ cv.addEventListener('pointerdown', e => {
 function handleMenuKey(key) {
   audio();
   const low = typeof key === 'string' ? key.toLowerCase() : key;
+  if (state === 'pause') { if (key === 'Enter' || key === ' ') resumeGame(); return; }
   if (state === 'select') {
     if (key === 'ArrowLeft' || low === 'a') selHover = (selHover + 5) % 6;
     if (key === 'ArrowRight' || low === 'd') selHover = (selHover + 1) % 6;
@@ -1694,6 +1747,8 @@ function rectHit(a, b) {
 /* ================= DESEN ================= */
 function draw() {
   ctx.setTransform(RS, 0, 0, RS, 0, 0);
+  const homeDisp = state === 'select' ? 'none' : 'flex';
+  if (btnHomeEl.style.display !== homeDisp) btnHomeEl.style.display = homeDisp;
   drawBackground();
 
   if (state === 'select') { drawSelect(); return; }
@@ -1786,6 +1841,11 @@ function draw() {
   if (state === 'bossdead') drawBossVictory();
   if (state === 'easteregg') drawEasterEgg();
   if (state === 'win') drawWin();
+  if (state === 'pause') {
+    drawOverlay('Pauză ⏸️', 'A = continuă  •  ⧉ View / ☰ Meniu = personaje 🏠');
+    ctx.font = '24px "Segoe UI", Arial'; ctx.fillStyle = '#ddd';
+    ctx.fillText('Y = reîncarcă jocul  •  B = ieșire din joc', W/2, H/2 + 90);
+  }
 }
 
 function drawBackground() {
@@ -4395,7 +4455,6 @@ function drawHUD() {
   if (player && player.wingsT > 0) { ctx.fillText('🪽' + Math.ceil(player.wingsT), px, 39); px -= 70; }
   if (player && player.fire) { ctx.fillText('🔥', px, 39); }
   btnFEl.style.display = (document.body.classList.contains('touch') && player && player.fire && state === 'play') ? 'flex' : 'none';
-
   if (player && (player.starT > 0 || player.wingsT > 0)) {   // numărătoare mare, centrală, pentru super puteri
     const activeT = player.starT > 0 ? player.starT : player.wingsT;
     const icon = player.starT > 0 ? '⭐' : '🪽';
