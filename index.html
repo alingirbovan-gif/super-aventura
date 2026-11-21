@@ -867,15 +867,140 @@ let levelSpawn = { x: 96, y: 480 };
 let carryBig = false;      // rămâi mare între niveluri (pierzi la moarte)
 let carryFire = false;     // a doua înghețată = bile de foc 🔥
 let fireballs = [];
-let fireCd = 0;
 let glasses = [];      // ochelarii aruncați de Deni spre boss 👓
 let checkpoints = [];   // puncte de salvare pe parcursul nivelului 🚩
 let bubbles = [];        // bulițe în urma jucătorului cât înoată 🫧
-let bubbleCd = 0;
 let fwT = 0;               // temporizator artificii 🎆
 let rampSteps = [];        // trepte de rampă care „coboară" pe rând
 let currentEgg = 'iepuras';   // ce surpriză a găsit acum
 let eggIdx = 0;               // alternează surprizele per personaj
+let eggCi = 0;                // personajul care a găsit surpriza (P1 sau P2)
+
+/* ===== CO-OP: AL DOILEA JUCĂTOR 🎮🎮 =====
+   `player` rămâne P1 (exact ca înainte). `p2` = al doilea jucător sau null.
+   Codul vechi lucrează cu `player` = „jucătorul procesat acum”: pentru P2 împrumutăm variabila
+   (asP2), cu input-ul și bufferul de săritură ale lui P2; după aceea `player` revine la P1.
+   Viețile și scorul sunt comune. */
+let p2 = null;
+let activeIn = null;          // input-ul lui P2 cât îl procesăm (null = input-ul lui P1)
+function charOf(p) { return CHARACTERS[p && p === p2 ? p2.ci : charIdx]; }
+function livePlayers() {
+  const a = [];
+  if (player && !player.dead) a.push(player);
+  if (p2 && !p2.dead) a.push(p2);
+  return a;
+}
+function leadPlayer() { return livePlayers()[0] || player; }   // P1 dacă trăiește, altfel P2
+let p1Hold = null;            // P1, cât timp `player` e împrumutat lui P2
+function p1Of() { return p2 && player === p2 ? p1Hold : player; }
+function asP2(fn) {
+  const q = p2, keepPl = player, keepJB = jumpBufferT;
+  if (!q) return;
+  p1Hold = keepPl;
+  player = q; activeIn = q.inp; jumpBufferT = q.jb;
+  try { fn(); }
+  finally {
+    q.jb = jumpBufferT;
+    activeIn = null; jumpBufferT = keepJB;
+    if (player === q) player = keepPl;
+  }
+}
+function forEachLive(fn) {    // rulează fn(p) pentru fiecare jucător viu, cu `player` = acel jucător
+  for (const q of livePlayers()) {
+    if (state !== 'play' || q.dead) continue;
+    if (q === p2) asP2(() => fn(q)); else fn(q);
+  }
+}
+function bodyFree(x, y, w, h) {
+  for (const [px, py] of [[x+2, y+2], [x+w-2, y+2], [x+2, y+h/2], [x+w-2, y+h/2], [x+2, y+h-2], [x+w-2, y+h-2]])
+    if (solidForBody(tileAt(px, py))) return false;
+  return true;
+}
+function placeNear(p, q) {    // pune jucătorul p lângă q (întâi în spatele lui, pe teren liber)
+  const back = q.dir > 0 ? -1 : 1;
+  const xs = [];
+  for (const d of [14, 50, 90]) {
+    xs.push(back < 0 ? q.x - p.w - d : q.x + q.w + d);
+    xs.push(back < 0 ? q.x + q.w + d : q.x - p.w - d);
+  }
+  const y = q.y + q.h - p.h;
+  const maxX = levelW * TILE - p.w;
+  for (const needGround of [true, false]) {
+    for (const x of xs) {
+      if (x < 0 || x > maxX || x < camX || x > camX + W - p.w) continue;
+      if (!bodyFree(x, y, p.w, p.h)) continue;
+      if (needGround && q.onGround && !solidTop(tileAt(x + p.w/2, y + p.h + 4))) continue;
+      p.x = x; p.y = y; return;
+    }
+  }
+  p.x = q.x + (q.w - p.w) / 2; p.y = y - 2;    // nu-i loc: chiar peste el (jucătorii nu se ciocnesc între ei)
+}
+function makeBody(ci) {
+  const cfg = CHARACTERS[ci];
+  const h = Math.round(58 * cfg.scale), w = Math.round(30 * cfg.scale);
+  return { x: 0, y: 0, w, h, baseW: w, baseH: h, big: false, fire: false, vx:0, vy:0,
+    onGround:false, coyote:0, dir:1, anim:0, invuln:0, wingsT:0, starT:0, flap:0 };
+}
+function partnerOf(ci) { return ci === 0 ? 1 : ci === 1 ? 0 : (ci + 1) % CHARACTERS.length; }
+function sparkleAt(p, col) {
+  for (let i=0;i<10;i++) particles.push({ x:p.x+p.w/2, y:p.y+p.h/2, vx:(Math.random()-0.5)*260, vy:-Math.random()*260, t:0.5, col });
+}
+function joinP2(padIdx) {
+  const ci = partnerOf(charIdx);
+  p2 = Object.assign(makeBody(ci), { ci, pad: padIdx, inp: { L:false, R:false, J:false }, jb: 0,
+    fireCd: 0, dead: false, respawnT: 0, edgeT: 0 });
+  p2.dir = player.dir;
+  placeNear(p2, player);
+  p2.invuln = 1.5;
+  sparkleAt(p2, '#ff8a80');
+  sfx.power();
+}
+function leaveP2() {
+  if (!p2) return;
+  if (!p2.dead) {
+    sparkleAt(p2, '#fff');
+    if (player.dead) respawnNear(player, p2, false);   // P1 aștepta să reapară lângă P2 → reapare acum
+  }
+  p2 = null;
+}
+function setP2Char(ci) {        // schimbă personajul lui P2, păstrând picioarele pe loc și puterile
+  const q = p2, nb = makeBody(ci);
+  const footY = q.y + q.h, cx = q.x + q.w/2;
+  q.ci = ci; q.baseW = nb.baseW; q.baseH = nb.baseH;
+  q.w = q.big ? Math.round(q.baseW * 1.15) : q.baseW;
+  q.h = q.big ? Math.round(q.baseH * 1.3) : q.baseH;
+  q.x = cx - q.w/2; q.y = footY - q.h;
+  sparkleAt(q, '#ffd700');
+  beep(820, 0.08, 'triangle', 0.1);
+}
+function cycleP2Char(step) {
+  if (!p2) return;
+  let ci = p2.ci;
+  do { ci = (ci + step + CHARACTERS.length) % CHARACTERS.length; } while (ci === charIdx);   // diferit de P1
+  setP2Char(ci);
+}
+function resetPowers(p, keepPowers) {
+  if (!keepPowers && p.big) { p.big = false; p.y += p.h - p.baseH; p.h = p.baseH; p.w = p.baseW; }
+  if (!keepPowers) p.fire = false;
+  p.wingsT = 0; p.starT = 0; p.vx = 0; p.vy = 0; p.flap = 0;
+}
+function respawnNear(p, q, keepPowers) {   // reapare lângă colegul lui, clipind (invulnerabil)
+  resetPowers(p, keepPowers);
+  p.dead = false; p.respawnT = 0; p.edgeT = 0;
+  p.dir = q.dir;
+  placeNear(p, q);
+  p.invuln = 2;
+  sparkleAt(p, '#fff');
+}
+function canPullTo(q) { return q.onGround || theme === 'apa' || theme === 'nori' || q.wingsT > 0; }
+function pullTo(p, q) {        // cel rămas în urmă e adus lângă cel din față ✨
+  sparkleAt(p, '#b388ff');
+  p.vx = 0; p.vy = 0; p.dir = q.dir; p.edgeT = 0; q.edgeT = 0;
+  placeNear(p, q);
+  p.invuln = Math.max(p.invuln, 1);
+  sparkleAt(p, '#b388ff');
+  beep(660, 0.12, 'triangle', 0.1, 300);
+}
 
 /* ================= INPUT ================= */
 const keys = {};
@@ -892,19 +1017,21 @@ addEventListener('keydown', e => {
 });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
-function inputLeft()  { return keys['arrowleft'] || keys['a'] || touchState.L || gpState.L; }
-function inputRight() { return keys['arrowright'] || keys['d'] || touchState.R || gpState.R; }
-function inputJumpHeld() { return keys[' '] || keys['arrowup'] || keys['w'] || touchState.J || gpState.J; }
+function inputLeft()  { if (activeIn) return activeIn.L; return keys['arrowleft'] || keys['a'] || touchState.L || gpState.L; }
+function inputRight() { if (activeIn) return activeIn.R; return keys['arrowright'] || keys['d'] || touchState.R || gpState.R; }
+function inputJumpHeld() { if (activeIn) return activeIn.J; return keys[' '] || keys['arrowup'] || keys['w'] || touchState.J || gpState.J; }
 
 /* ===== CONTROLLER (Xbox / gamepad) 🎮 =====
    Stick stânga sau D-pad = mers; A = sărit / alege; X sau RB = bilă de foc; Start = alege. */
 const gpState = { L:false, R:false, J:false };
 const gpPrev = {};
 let gpSeen = false;
+let gpIdx1 = -1;              // indexul controllerului lui P1 (primul conectat, în afară de cel al lui P2)
 function pollGamepad() {
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
   let gp = null;
-  for (const p of pads) if (p && p.connected) { gp = p; break; }
+  for (const p of pads) if (p && p.connected && !(p2 && p.index === p2.pad)) { gp = p; break; }
+  gpIdx1 = gp ? gp.index : -1;
   if (!gp) { gpState.L = gpState.R = gpState.J = false; return; }
   const b = i => !!(gp.buttons[i] && gp.buttons[i].pressed);
   const ax = gp.axes[0] || 0;
@@ -945,6 +1072,51 @@ function pollGamepad() {
   gpPrev.Y = b(3);
 }
 
+/* ===== CONTROLLERUL LUI P2 (co-op) 🎮🎮 =====
+   P1 = tastatură + atingere + PRIMUL controller (neschimbat).
+   P2 = orice ALT controller:
+     A (în joc)            = intră în joc, lângă P1
+     stick / D-pad          = mers
+     A sau D-pad sus        = sărit / zbor / înot
+     X                      = bilă de foc
+     LB / RB                = personajul anterior / următor (diferit de al lui P1)
+     ☰ Meniu                = pauză (A = continuă)
+     ⧉ View                 = P2 iese din joc (reintră cu A)
+   Al treilea controller e ignorat cât timp P2 e în joc. */
+const gp2Prev = {};           // starea anterioară a butoanelor, pe fiecare controller (după index)
+function pollGamepad2() {
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  let p2Pad = false;
+  for (const gp of pads) {
+    if (!gp || !gp.connected || gp.index === gpIdx1) continue;
+    if (p2 && gp.index !== p2.pad) continue;
+    const b = i => !!(gp.buttons[i] && gp.buttons[i].pressed);
+    const ax = gp.axes[0] || 0;
+    const cur = { L: b(14) || ax < -0.4, R: b(15) || ax > 0.4, J: b(0) || b(12), A: b(0),
+                  F: b(2), LB: b(4), RB: b(5), M: b(9), V: b(8) };
+    const prev = gp2Prev[gp.index] || {};
+    const edge = k => cur[k] && !prev[k];
+    gp2Prev[gp.index] = cur;
+    if (!p2) {
+      // prima apăsare contează: browserul arată controllerul abia după ce apeși un buton pe el
+      if (state === 'play' && edge('A')) { audio(); trapBack(); joinP2(gp.index); }
+      continue;
+    }
+    p2Pad = true;
+    p2.inp.L = cur.L; p2.inp.R = cur.R; p2.inp.J = cur.J;
+    if (edge('V')) { leaveP2(); return; }
+    if (edge('M')) { menuBack(); continue; }
+    if (state === 'pause') { if (edge('A')) resumeGame(); }
+    else if (state === 'play') {
+      if (edge('J')) p2.jb = JUMP_BUFFER;
+      if (edge('F')) shootFireball(p2);
+      if (edge('LB')) cycleP2Char(-1);
+      if (edge('RB')) cycleP2Char(1);
+    }
+  }
+  if (p2 && !p2Pad) p2.inp.L = p2.inp.R = p2.inp.J = false;   // controller deconectat: P2 stă pe loc
+}
+
 /* ===== PAUZĂ / ÎNAPOI ⏸️ =====
    ☰ Meniu (sau Esc / P): în joc → pauză; în pauză → înapoi la alegerea personajului. A / Enter = continuă.
    Cu controllerul, B („înapoi" în browser): în joc → pauză; din pauză sau din alegerea personajelor → iese de-adevăratelea.
@@ -954,6 +1126,7 @@ function resumeGame() { if (state === 'pause') state = 'play'; }
 function backToSelect() {
   saveRecord(); stopMusic();
   state = 'select'; stateTimer = 0; score = 0; lives = LIVES_START; levelIdx = 0; helper = null;
+  p2 = null;                  // P2 iese când ne întoarcem la alegerea personajelor
 }
 const btnHomeEl = document.getElementById('btnHome');
 btnHomeEl.addEventListener('pointerdown', e => {
@@ -1027,12 +1200,13 @@ function handleMenuKey(key) {
     if (key === 'Enter' || key === ' ') chooseHelper(Math.min(selHelperHover, n - 1));
     for (let k = 1; k <= n; k++) if (key === String(k)) chooseHelper(k - 1);
   } else if (state === 'win' && (key === 'Enter' || key === ' ')) {
-    if (stateTimer > 1) { saveRecord(); state = 'select'; stopMusic(); score = 0; lives = LIVES_START; levelIdx = 0; }
+    if (stateTimer > 1) { saveRecord(); state = 'select'; stopMusic(); score = 0; lives = LIVES_START; levelIdx = 0; p2 = null; }
   }
 }
 function chooseChar(i) {
   charIdx = i;
   score = 0; lives = LIVES_START; levelIdx = 0; carryBig = false; carryFire = false;
+  p2 = null;
   loadLevel(0);
   state = 'play';
 }
@@ -1089,6 +1263,7 @@ function loadLevel(idx, keepCheckpoint) {
   }
   for (let c = 0; c < levelW; c++) grid[0][c] = 1;   // tavan peste tot — adio scurtătura pe sus 🙂
   camX = Math.max(0, player.x - W/3);
+  if (p2) respawnNear(p2, player, !p2.dead);   // P2 vine în nivelul nou lângă P1 (cu puterile, dacă era viu)
   startMusic(theme);
 }
 function makeEnemy(x, y, forceKind) {
@@ -1117,7 +1292,7 @@ function spawnPlayer(x, y) {
 function growPlayer(silent) {
   const p = player;
   if (!p.big) {
-    p.big = true; carryBig = true;
+    p.big = true; if (p !== p2) carryBig = true;   // „carry” e doar al lui P1
     const nh = Math.round(p.baseH * 1.3), nw = Math.round(p.baseW * 1.15);
     p.y -= nh - p.h;
     p.h = nh; p.w = nw;
@@ -1126,7 +1301,7 @@ function growPlayer(silent) {
 }
 function shrinkPlayer() {
   const p = player;
-  p.big = false; carryBig = false;
+  p.big = false; if (p !== p2) carryBig = false;
   p.y += p.h - p.baseH;
   p.h = p.baseH; p.w = p.baseW;
   p.invuln = 2;
@@ -1236,7 +1411,8 @@ function hitBlockAbove(r, b) {
       sfx.power(); sfx.heart();
       for (let i=0;i<10;i++) particles.push({ x:c*TILE+TILE/2, y:r*TILE+TILE/2, vx:(Math.random()-0.5)*350,
         vy:-150-Math.random()*250, t:0.7, col: ['#ffd700','#ff8fb5','#7fd4ff'][i%3] });
-      const eggsFor = [['barbie','iepuras'], ['pompieri','masina-spalat'], ['gantera'], ['cafea'], ['crap'], ['bani']][charIdx] || ['iepuras'];
+      eggCi = b === p2 ? p2.ci : charIdx;   // surpriza e a celui care a spart cărămida
+      const eggsFor = [['barbie','iepuras'], ['pompieri','masina-spalat'], ['gantera'], ['cafea'], ['crap'], ['bani']][eggCi] || ['iepuras'];
       currentEgg = eggsFor[eggIdx % eggsFor.length];
       eggIdx++;
       state = 'easteregg'; stateTimer = 0;
@@ -1251,7 +1427,228 @@ function update(dt) {
   stateTimer += dt;
   if (state !== 'play') { updateFX(dt); return; }
 
-  const p = player;
+  // fizica fiecărui jucător (P1 cu input-ul lui; P2 cu al lui, prin asP2)
+  for (const q of livePlayers()) {
+    if (state !== 'play') break;
+    if (q === p2) asP2(() => updatePlayerBody(q, dt)); else updatePlayerBody(q, dt);
+  }
+  updateRespawns(dt);
+
+  // monede
+  for (const cn of coins) if (!cn.taken) cn.anim += dt * 6;
+  forEachLive(p => {
+    for (const cn of coins) {
+      if (cn.taken) continue;
+      const cx = cn.c*TILE + TILE/2, cy = cn.r*TILE + TILE/2;
+      if (Math.abs(p.x + p.w/2 - cx) < TILE*0.55 && Math.abs(p.y + p.h/2 - cy) < TILE*0.6) {
+        cn.taken = true; score += 10; sfx.coin();
+        spawnFlyCoin(cx, cy);
+        for (let i=0;i<6;i++) particles.push({ x:cx, y:cy, vx:(Math.random()-0.5)*200, vy:-Math.random()*250, t:0.5, col:'#ffd700' });
+      }
+    }
+  });
+
+  // power-up-uri (ies din cărămidă, apoi merg ca ciupercile din Mario)
+  for (const pu of powerups) {
+    if (pu.phase === 'rising') {
+      pu.y -= 90 * dt;
+      if (pu.y <= pu.targetY) { pu.y = pu.targetY; pu.phase = 'walk'; pu.vx = 70; pu.vy = 0; }
+    } else if (pu.phase === 'static') {
+      // orbul de foc stă pe loc și pulsează
+    } else {
+      const body = { x: pu.x - 16, y: pu.y - 16, w: 32, h: 32, vx: pu.vx, vy: pu.vy };
+      moveBody(body, dt, false);
+      pu.x = body.x + 16; pu.y = body.y + 16; pu.vx = body.vx; pu.vy = body.vy;
+      if (pu.y > H + 200) pu.taken = true;
+    }
+  }
+  forEachLive(p => {
+    for (const pu of powerups) {
+      if (pu.taken) continue;
+      if (Math.abs(p.x + p.w/2 - pu.x) < 40 && Math.abs(p.y + p.h/2 - pu.y) < 46) {
+        pu.taken = true;
+        if (pu.type === 'wings') { p.wingsT = WINGS_TIME; sfx.power(); }
+        else if (pu.type === 'star') { p.starT = STAR_TIME; sfx.star(); }
+        else if (pu.type === 'heart') { lives = Math.min(lives + 1, LIVES_START); sfx.heart(); }
+        else if (pu.type === 'ice') {
+          if (!p.big) growPlayer();                              // prima înghețată: MARE 🍦
+          else if (!p.fire) { p.fire = true; if (p !== p2) carryFire = true; sfx.star(); }   // a doua: bile de foc 🔥
+          else score += 50;
+        }
+        else if (pu.type === 'fire') {                           // orb de foc: primești direct bilele 🔥
+          if (!p.big) growPlayer(true);
+          p.fire = true; if (p !== p2) carryFire = true;
+          sfx.star();
+        }
+        score += 25;
+        for (let i=0;i<10;i++) particles.push({ x:pu.x, y:pu.y, vx:(Math.random()-0.5)*300, vy:-Math.random()*300, t:0.6,
+          col: pu.type==='star' ? '#ffd700' : pu.type==='heart' ? '#ff6090' : '#fff' });
+      }
+    }
+  });
+  powerups = powerups.filter(pu => !pu.taken);
+
+  // inamici: întâi se mișcă, apoi se ciocnesc cu fiecare jucător
+  for (const en of enemies) {
+    if (en.dead) { en.deadT -= dt; continue; }
+    en.anim += dt * 8;
+    if (en.kind === 'walker') {
+      // întoarce-te cu o dală înainte de marginea gropii (să nu pândească pe buza ei)
+      const aheadX = en.vx < 0 ? en.x - 36 : en.x + en.w + 36;
+      if (en.onGround && !solidTop(tileAt(aheadX, en.y + en.h + 4))) en.vx = -en.vx;
+      moveBody(en, dt, false);
+      if (en.y > H + 200) { en.dead = true; en.deadT = 0; continue; }
+    } else {                       // pește / pasăre — plutesc
+      en.x += en.vx * dt;
+      const aheadX = en.vx < 0 ? en.x - 2 : en.x + en.w + 2;
+      if (solidForBody(tileAt(aheadX, en.y + en.h/2)) || en.x < 0 || en.x > levelW*TILE - en.w) en.vx = -en.vx;
+      en.y = en.baseY + Math.sin(en.anim * 0.6) * (en.kind === 'bird' ? 34 : 12);
+    }
+  }
+  forEachLive(p => {
+    for (const en of enemies) {
+      if (en.dead || state !== 'play' || p.dead) continue;
+      if (rectHit(p, en)) {
+        if (p.starT > 0) {           // steaua distruge tot!
+          en.dead = true; en.deadT = 0.4;
+          score += 25; sfx.stomp();
+          for (let i=0;i<8;i++) particles.push({ x:en.x+en.w/2, y:en.y+en.h/2, vx:(Math.random()-0.5)*300, vy:-Math.random()*250, t:0.4, col:'#ffd700' });
+        } else if ((p.vy > 100 && p.y + p.h - en.y < 28) ||
+                   (p.vy > 400 && p.y + p.h - en.y < en.h * 0.9)) {   // cădere rapidă = turtit oriunde l-ai atins
+          en.dead = true; en.deadT = 0.5;
+          p.vy = -JUMP_V * 0.55;
+          score += 25; sfx.stomp();
+          for (let i=0;i<8;i++) particles.push({ x:en.x+en.w/2, y:en.y+en.h/2, vx:(Math.random()-0.5)*300, vy:-Math.random()*200, t:0.4, col:'#a05a2c' });
+        } else if (p.invuln <= 0) {
+          hurtPlayer();
+        }
+      }
+    }
+  });
+  // bile de foc 🔥
+  for (const fb of fireballs) {
+    fb.t -= dt;
+    fb.vy += 1300 * dt;
+    fb.x += fb.vx * dt; fb.y += fb.vy * dt;
+    if (fb.vy > 0 && solidTop(tileAt(fb.x, fb.y + 9))) fb.vy = -380;       // ricoșează pe sol
+    if (solidForBody(tileAt(fb.x + Math.sign(fb.vx) * 10, fb.y))) fb.t = 0;
+    for (const en of enemies) {
+      if (!en.dead && fb.t > 0 && fb.x > en.x - 8 && fb.x < en.x + en.w + 8 && fb.y > en.y - 8 && fb.y < en.y + en.h + 8) {
+        en.dead = true; en.deadT = 0.4; fb.t = 0; score += 25; sfx.stomp();
+        for (let i=0;i<8;i++) particles.push({ x:en.x+en.w/2, y:en.y+en.h/2, vx:(Math.random()-0.5)*300, vy:-Math.random()*250, t:0.4, col:'#ff9f1c' });
+      }
+    }
+    if (boss && !boss.dead && fb.t > 0 && boss.invT <= 0 &&
+        fb.x > boss.x && fb.x < boss.x + boss.w && fb.y > boss.y && fb.y < boss.y + boss.h) {
+      fb.t = 0; bossDamage(1);
+    }
+  }
+  fireballs = fireballs.filter(fb => fb.t > 0);
+  // ochelarii aruncați de Deni 👓
+  for (const gl of glasses) {
+    gl.t -= dt;
+    gl.vy += 900 * dt;
+    gl.x += gl.vx * dt; gl.y += gl.vy * dt;
+    gl.spin += dt * 22;
+    if (solidForBody(tileAt(gl.x, gl.y))) gl.t = 0;
+    if (boss && !boss.dead && gl.t > 0 && boss.invT <= 0 &&
+        gl.x > boss.x && gl.x < boss.x + boss.w && gl.y > boss.y && gl.y < boss.y + boss.h) {
+      gl.t = 0;
+      bossDamage(boss.kind === 'balaur' ? 1 : 0.5);
+      for (let i=0;i<6;i++) particles.push({ x:gl.x, y:gl.y, vx:(Math.random()-0.5)*300, vy:-Math.random()*250, t:0.4, col:'#3a3f44' });
+    }
+    for (const en of enemies) {
+      if (!en.dead && gl.t > 0 && gl.x > en.x-8 && gl.x < en.x+en.w+8 && gl.y > en.y-8 && gl.y < en.y+en.h+8) {
+        en.dead = true; en.deadT = 0.4; gl.t = 0; score += 25; sfx.stomp();
+        for (let i=0;i<6;i++) particles.push({ x:en.x+en.w/2, y:en.y+en.h/2, vx:(Math.random()-0.5)*300, vy:-Math.random()*250, t:0.4, col:'#3a3f44' });
+      }
+    }
+  }
+  glasses = glasses.filter(gl => gl.t > 0);
+  enemies = enemies.filter(e => !e.dead || e.deadT > 0);
+
+  // boss + ajutor
+  if (boss && !boss.dead) updateBoss(dt);
+  if (helper) updateHelper(dt);
+
+  // checkpoint — de aici reiei dacă mori, nu de la începutul nivelului 🚩 (îl ia oricare jucător)
+  forEachLive(p => {
+    for (const cp of checkpoints) {
+      if (!cp.taken && p.x + p.w/2 > cp.x) {
+        cp.taken = true;
+        levelSpawn = { x: cp.x, y: cp.y };
+        sfx.power();
+        for (let i=0;i<8;i++) particles.push({ x:cp.x, y:cp.y+TILE/2, vx:(Math.random()-0.5)*200, vy:-100-Math.random()*200, t:0.5, col:'#7fd4ff' });
+      }
+    }
+  });
+
+  // steag (blocat cât timp trăiește minibossul!) — oricare jucător ajunge, nivelul se termină pentru amândoi
+  forEachLive(p => {
+    if (state === 'play' && flagX > 0 && (!boss || boss.dead) && p.x + p.w/2 > flagX) {
+      state = 'levelend'; stateTimer = 0;
+      score += 100;
+      saveRecord();
+      sfx.flag();
+    }
+  });
+
+  updateCamera(dt);
+  updateFX(dt);
+}
+
+function updateCamera(dt) {
+  const live = livePlayers();
+  const maxCam = levelW*TILE - W;
+  if (live.length < 2) {                 // un singur jucător: camera exact ca înainte
+    const p = live[0] || player;
+    const target = p.x - W*0.38;
+    camX += (target - camX) * Math.min(1, dt*6);
+    camX = Math.max(0, Math.min(camX, maxCam));
+    return;
+  }
+  // doi jucători: camera urmărește mijlocul și îi ține pe amândoi în imagine 🎥
+  const M = 24;
+  const lead = live[0].x >= live[1].x ? live[0] : live[1];
+  const trail = lead === live[0] ? live[1] : live[0];
+  let minX = Math.min(trail.x, lead.x), maxX = Math.max(trail.x + trail.w, lead.x + lead.w);
+  if (maxX - minX > W && canPullTo(lead)) {        // prea departe unul de altul → cel din urmă vine lângă cel din față
+    pullTo(trail, lead);
+    minX = Math.min(trail.x, lead.x); maxX = Math.max(trail.x + trail.w, lead.x + lead.w);
+  }
+  const target = (minX + maxX) / 2 - W/2;
+  camX += (target - camX) * Math.min(1, dt*6);
+  const lo = maxX + M - W, hi = minX - M;
+  if (lo <= hi) camX = Math.max(lo, Math.min(hi, camX));
+  camX = Math.max(0, Math.min(camX, maxCam));
+  // marginile ecranului sunt „pereți”: nimeni nu iese din imagine
+  for (const q of live) {
+    const left = camX + 4, right = camX + W - q.w - 4;
+    let blocked = 0;
+    if (q.x < left && q.x < q.px) { q.x = Math.min(q.px, left); if (q.vx < 0) q.vx = 0; blocked = -1; }
+    else if (q.x > right && q.x > q.px) { q.x = Math.max(q.px, right); if (q.vx > 0) q.vx = 0; blocked = 1; }
+    q.edgeT = blocked ? (q.edgeT || 0) + dt : 0;
+  }
+  // cel din față împinge de marginea din dreapta ~1 s → cel rămas în urmă e adus lângă el
+  if (lead.edgeT > 1 && lead.x + lead.w > camX + W - 40 && canPullTo(lead)) pullTo(trail, lead);
+}
+
+function updateRespawns(dt) {       // cine a murit (cât celălalt trăiește) reapare lângă coleg după ~1,5 s
+  for (const q of [player, p2]) {
+    if (!q || !q.dead) continue;
+    q.respawnT -= dt;
+    const mate = q === player ? p2 : player;
+    if (!mate || mate.dead) continue;
+    if (q.respawnT <= 0 && (canPullTo(mate) || q.respawnT < -2)) {
+      respawnNear(q, mate, false);
+      sfx.power();
+    }
+  }
+}
+
+function updatePlayerBody(p, dt) {
+  p.px = p.x;
+  if (p.fireCd > 0) p.fireCd -= dt;
   const flying = p.wingsT > 0 || theme === 'nori';
   const swimming = theme === 'apa';
 
@@ -1308,169 +1705,18 @@ function update(dt) {
   if (p.flap > 0) p.flap -= dt;
 
   if (swimming) {                        // bulițe din mască cât înoată 🫧
-    bubbleCd -= dt;
-    if (bubbleCd <= 0) {
-      bubbleCd = 0.3 + Math.random()*0.25;
+    p.bubbleCd = (p.bubbleCd || 0) - dt;   // fiecare jucător cu bulițele lui
+    if (p.bubbleCd <= 0) {
+      p.bubbleCd = 0.3 + Math.random()*0.25;
       bubbles.push({ x: p.x + p.w/2 - p.dir*8, y: p.y + p.h*0.3, vx:(Math.random()-0.5)*20, vy:-40-Math.random()*30, t: 1.4, r: 2.5+Math.random()*2.5 });
     }
   }
 
   if (p.y > H + 100) hurtPlayer(true);   // căderea în gol e mereu fatală
-
-  // monede
-  for (const cn of coins) {
-    if (cn.taken) continue;
-    cn.anim += dt * 6;
-    const cx = cn.c*TILE + TILE/2, cy = cn.r*TILE + TILE/2;
-    if (Math.abs(p.x + p.w/2 - cx) < TILE*0.55 && Math.abs(p.y + p.h/2 - cy) < TILE*0.6) {
-      cn.taken = true; score += 10; sfx.coin();
-      spawnFlyCoin(cx, cy);
-      for (let i=0;i<6;i++) particles.push({ x:cx, y:cy, vx:(Math.random()-0.5)*200, vy:-Math.random()*250, t:0.5, col:'#ffd700' });
-    }
-  }
-
-  // power-up-uri (ies din cărămidă, apoi merg ca ciupercile din Mario)
-  for (const pu of powerups) {
-    if (pu.phase === 'rising') {
-      pu.y -= 90 * dt;
-      if (pu.y <= pu.targetY) { pu.y = pu.targetY; pu.phase = 'walk'; pu.vx = 70; pu.vy = 0; }
-    } else if (pu.phase === 'static') {
-      // orbul de foc stă pe loc și pulsează
-    } else {
-      const body = { x: pu.x - 16, y: pu.y - 16, w: 32, h: 32, vx: pu.vx, vy: pu.vy };
-      moveBody(body, dt, false);
-      pu.x = body.x + 16; pu.y = body.y + 16; pu.vx = body.vx; pu.vy = body.vy;
-      if (pu.y > H + 200) pu.taken = true;
-    }
-    if (Math.abs(p.x + p.w/2 - pu.x) < 40 && Math.abs(p.y + p.h/2 - pu.y) < 46) {
-      pu.taken = true;
-      if (pu.type === 'wings') { p.wingsT = WINGS_TIME; sfx.power(); }
-      else if (pu.type === 'star') { p.starT = STAR_TIME; sfx.star(); }
-      else if (pu.type === 'heart') { lives = Math.min(lives + 1, LIVES_START); sfx.heart(); }
-      else if (pu.type === 'ice') {
-        if (!p.big) growPlayer();                              // prima înghețată: MARE 🍦
-        else if (!p.fire) { p.fire = true; carryFire = true; sfx.star(); }   // a doua: bile de foc 🔥
-        else score += 50;
-      }
-      else if (pu.type === 'fire') {                           // orb de foc: primești direct bilele 🔥
-        if (!p.big) growPlayer(true);
-        p.fire = true; carryFire = true;
-        sfx.star();
-      }
-      score += 25;
-      for (let i=0;i<10;i++) particles.push({ x:pu.x, y:pu.y, vx:(Math.random()-0.5)*300, vy:-Math.random()*300, t:0.6,
-        col: pu.type==='star' ? '#ffd700' : pu.type==='heart' ? '#ff6090' : '#fff' });
-    }
-  }
-  powerups = powerups.filter(pu => !pu.taken);
-
-  // inamici
-  for (const en of enemies) {
-    if (en.dead) { en.deadT -= dt; continue; }
-    en.anim += dt * 8;
-    if (en.kind === 'walker') {
-      // întoarce-te cu o dală înainte de marginea gropii (să nu pândească pe buza ei)
-      const aheadX = en.vx < 0 ? en.x - 36 : en.x + en.w + 36;
-      if (en.onGround && !solidTop(tileAt(aheadX, en.y + en.h + 4))) en.vx = -en.vx;
-      moveBody(en, dt, false);
-      if (en.y > H + 200) { en.dead = true; en.deadT = 0; continue; }
-    } else {                       // pește / pasăre — plutesc
-      en.x += en.vx * dt;
-      const aheadX = en.vx < 0 ? en.x - 2 : en.x + en.w + 2;
-      if (solidForBody(tileAt(aheadX, en.y + en.h/2)) || en.x < 0 || en.x > levelW*TILE - en.w) en.vx = -en.vx;
-      en.y = en.baseY + Math.sin(en.anim * 0.6) * (en.kind === 'bird' ? 34 : 12);
-    }
-    if (rectHit(p, en)) {
-      if (p.starT > 0) {           // steaua distruge tot!
-        en.dead = true; en.deadT = 0.4;
-        score += 25; sfx.stomp();
-        for (let i=0;i<8;i++) particles.push({ x:en.x+en.w/2, y:en.y+en.h/2, vx:(Math.random()-0.5)*300, vy:-Math.random()*250, t:0.4, col:'#ffd700' });
-      } else if ((p.vy > 100 && p.y + p.h - en.y < 28) ||
-                 (p.vy > 400 && p.y + p.h - en.y < en.h * 0.9)) {   // cădere rapidă = turtit oriunde l-ai atins
-        en.dead = true; en.deadT = 0.5;
-        p.vy = -JUMP_V * 0.55;
-        score += 25; sfx.stomp();
-        for (let i=0;i<8;i++) particles.push({ x:en.x+en.w/2, y:en.y+en.h/2, vx:(Math.random()-0.5)*300, vy:-Math.random()*200, t:0.4, col:'#a05a2c' });
-      } else if (p.invuln <= 0) {
-        hurtPlayer();
-      }
-    }
-  }
-  // bile de foc 🔥
-  if (fireCd > 0) fireCd -= dt;
-  for (const fb of fireballs) {
-    fb.t -= dt;
-    fb.vy += 1300 * dt;
-    fb.x += fb.vx * dt; fb.y += fb.vy * dt;
-    if (fb.vy > 0 && solidTop(tileAt(fb.x, fb.y + 9))) fb.vy = -380;       // ricoșează pe sol
-    if (solidForBody(tileAt(fb.x + Math.sign(fb.vx) * 10, fb.y))) fb.t = 0;
-    for (const en of enemies) {
-      if (!en.dead && fb.t > 0 && fb.x > en.x - 8 && fb.x < en.x + en.w + 8 && fb.y > en.y - 8 && fb.y < en.y + en.h + 8) {
-        en.dead = true; en.deadT = 0.4; fb.t = 0; score += 25; sfx.stomp();
-        for (let i=0;i<8;i++) particles.push({ x:en.x+en.w/2, y:en.y+en.h/2, vx:(Math.random()-0.5)*300, vy:-Math.random()*250, t:0.4, col:'#ff9f1c' });
-      }
-    }
-    if (boss && !boss.dead && fb.t > 0 && boss.invT <= 0 &&
-        fb.x > boss.x && fb.x < boss.x + boss.w && fb.y > boss.y && fb.y < boss.y + boss.h) {
-      fb.t = 0; bossDamage(1);
-    }
-  }
-  fireballs = fireballs.filter(fb => fb.t > 0);
-  // ochelarii aruncați de Deni 👓
-  for (const gl of glasses) {
-    gl.t -= dt;
-    gl.vy += 900 * dt;
-    gl.x += gl.vx * dt; gl.y += gl.vy * dt;
-    gl.spin += dt * 22;
-    if (solidForBody(tileAt(gl.x, gl.y))) gl.t = 0;
-    if (boss && !boss.dead && gl.t > 0 && boss.invT <= 0 &&
-        gl.x > boss.x && gl.x < boss.x + boss.w && gl.y > boss.y && gl.y < boss.y + boss.h) {
-      gl.t = 0;
-      bossDamage(boss.kind === 'balaur' ? 1 : 0.5);
-      for (let i=0;i<6;i++) particles.push({ x:gl.x, y:gl.y, vx:(Math.random()-0.5)*300, vy:-Math.random()*250, t:0.4, col:'#3a3f44' });
-    }
-    for (const en of enemies) {
-      if (!en.dead && gl.t > 0 && gl.x > en.x-8 && gl.x < en.x+en.w+8 && gl.y > en.y-8 && gl.y < en.y+en.h+8) {
-        en.dead = true; en.deadT = 0.4; gl.t = 0; score += 25; sfx.stomp();
-        for (let i=0;i<6;i++) particles.push({ x:en.x+en.w/2, y:en.y+en.h/2, vx:(Math.random()-0.5)*300, vy:-Math.random()*250, t:0.4, col:'#3a3f44' });
-      }
-    }
-  }
-  glasses = glasses.filter(gl => gl.t > 0);
-  enemies = enemies.filter(e => !e.dead || e.deadT > 0);
-
-  // boss + ajutor
-  if (boss && !boss.dead) updateBoss(dt);
-  if (helper) updateHelper(dt);
-
-  // checkpoint — de aici reiei dacă mori, nu de la începutul nivelului 🚩
-  for (const cp of checkpoints) {
-    if (!cp.taken && p.x + p.w/2 > cp.x) {
-      cp.taken = true;
-      levelSpawn = { x: cp.x, y: cp.y };
-      sfx.power();
-      for (let i=0;i<8;i++) particles.push({ x:cp.x, y:cp.y+TILE/2, vx:(Math.random()-0.5)*200, vy:-100-Math.random()*200, t:0.5, col:'#7fd4ff' });
-    }
-  }
-
-  // steag (blocat cât timp trăiește minibossul!)
-  if (flagX > 0 && (!boss || boss.dead) && p.x + p.w/2 > flagX) {
-    state = 'levelend'; stateTimer = 0;
-    score += 100;
-    saveRecord();
-    sfx.flag();
-  }
-
-  // cameră
-  const target = p.x - W*0.38;
-  camX += (target - camX) * Math.min(1, dt*6);
-  camX = Math.max(0, Math.min(camX, levelW*TILE - W));
-
-  updateFX(dt);
 }
 
 function updateBoss(dt) {
-  const b = boss, p = player;
+  const b = boss;
   b.anim += dt * 6;
   if (b.invT > 0) b.invT -= dt;
   // viteza crește când e rănit
@@ -1497,15 +1743,16 @@ function updateBoss(dt) {
     moveBody(b, dt, false);
   }
 
-  // lovit de jucător
-  if (rectHit(p, b)) {
+  // lovit de jucător (de oricare dintre ei)
+  forEachLive(p => {
+    if (b.dead || !rectHit(p, b)) return;
     if (p.vy > 100 && p.y + p.h - b.y < 58 && b.invT <= 0) {
       bossDamage(2);
       p.vy = -JUMP_V * 0.6;
     } else if (p.invuln <= 0 && b.invT <= 0) {
       hurtPlayer();
     }
-  }
+  });
 }
 function bossDamage(dmg) {
   boss.hp -= dmg;
@@ -1543,9 +1790,10 @@ function nearestLiveEnemy(h) {
 }
 function updateHelper(dt) {
   const h = helper, b = boss;
+  const pl = leadPlayer();     // ajutorul îl urmează pe P1 (sau pe P2, cât P1 așteaptă să reapară)
   h.cool -= dt;
   if (h.punchT > 0) h.punchT -= dt;
-  const fightMode = b && !b.dead && Math.abs((b.x + b.w/2) - (player.x + player.w/2)) < 750;
+  const fightMode = b && !b.dead && Math.abs((b.x + b.w/2) - (pl.x + pl.w/2)) < 750;
   const meleeRange = h.cfg.attack === 'punch' || h.cfg.attack === 'ram';
   const nearEnemy = nearestLiveEnemy(h);
   // în luptă cu boss-ul rămâne concentrat pe el, dar dacă un inamic (ex: liliac) trece chiar pe lângă el, îl curăță
@@ -1561,7 +1809,7 @@ function updateHelper(dt) {
     tx = b.x + b.w/2 - h.w/2 - (meleeRange ? 0 : Math.sign((b.x+b.w/2)-(h.x+h.w/2) || 1) * 90);
   } else {
     // merge ÎN FAȚA jucătorului, pe direcția de mers, ca scut 🛡️
-    tx = player.dir > 0 ? player.x + player.w + 55 : player.x - 55 - h.w;
+    tx = pl.dir > 0 ? pl.x + pl.w + 55 : pl.x - 55 - h.w;
   }
   const dx = tx - h.x;
   if (Math.abs(dx) > 20) { h.vx += Math.sign(dx) * 2400 * dt; h.dir = Math.sign(dx) || 1; }
@@ -1618,7 +1866,7 @@ function updateHelper(dt) {
   }
   moveBody(h, dt, false);
   h.vx = Math.max(-385, Math.min(385, h.vx));
-  if (h.y > H + 150) { h.x = player.x + player.w + 50; h.y = player.y - 60; h.vy = 0; }   // plasă de siguranță
+  if (h.y > H + 150) { h.x = pl.x + pl.w + 50; h.y = pl.y - 60; h.vy = 0; }   // plasă de siguranță
   if (Math.abs(h.vx) > 20 && h.onGround) h.anim += dt * 11; else if (h.onGround) h.anim = 0;
 }
 
@@ -1672,10 +1920,11 @@ function updateFX(dt) {
   if (state === 'minibossdead' && stateTimer > 10) { state = 'play'; startMusic(theme); }
   if (state === 'easteregg' && stateTimer > 3.5) { state = 'play'; }
   if (state === 'dead' && stateTimer > 1.5) {
-    if (lives <= 0) { lives = LIVES_START; }
+    if (lives <= 0) { lives = LIVES_START; p2 = null; }   // „game over”: P2 iese (reintră cu A)
     if (boss && !boss.dead) {
       // orice boss rămâne rănit — doar jucătorul reapare la start, ajutorul e transferat lângă el
       spawnPlayer(levelSpawn.x, levelSpawn.y);
+      if (p2) respawnNear(p2, player, !p2.dead);
       if (helper) { helper.x = player.x - 80; helper.y = player.y - 40; helper.vx = 0; helper.vy = 0; }
       state = 'play';
     } else {
@@ -1703,23 +1952,28 @@ function spawnFirework() {
   beep(500 + Math.random()*400, 0.22, 'triangle', 0.08, -250);
 }
 
-function shootFireball() {
-  const p = player;
-  if (!p || !p.fire || state !== 'play' || fireCd > 0) return;
-  fireCd = 0.35;
+function shootFireball(who) {     // who = P2 de pe controllerul lui; altfel P1
+  const p = who || player;
+  if (!p || p.dead || !p.fire || state !== 'play' || p.fireCd > 0) return;
+  p.fireCd = 0.35;
   fireballs.push({ x: p.x + p.w/2 + p.dir*18, y: p.y + p.h*0.45, vx: p.dir*430, vy: 60, t: 2.2 });
   beep(600, 0.1, 'square', 0.1, -300);
 }
 
 function hurtPlayer(fatal) {
+  const p = player;
+  if (!p || p.dead) return;
   if (godMode) {
-    if (fatal) spawnPlayer(levelSpawn.x, levelSpawn.y);   // căderea nu te omoară, dar nici nu cazi la nesfârșit
+    if (fatal) {                 // căderea nu te omoară, dar nici nu cazi la nesfârșit
+      if (p !== p2) spawnPlayer(levelSpawn.x, levelSpawn.y);
+      else if (!p1Of().dead) respawnNear(p2, p1Of(), true);
+      else { p2.x = levelSpawn.x; p2.y = levelSpawn.y + TILE - p2.h; p2.vy = 0; }
+    }
     return;
   }
-  const p = player;
   if (!fatal && p.fire) {
     // pierzi întâi puterea de foc, rămâi mare
-    p.fire = false; carryFire = false;
+    p.fire = false; if (p !== p2) carryFire = false;
     p.invuln = 2;
     sfx.hurt();
     for (let i=0;i<8;i++) particles.push({ x:p.x+p.w/2, y:p.y+p.h/2, vx:(Math.random()-0.5)*250, vy:-Math.random()*250, t:0.5, col:'#ff9f1c' });
@@ -1732,12 +1986,23 @@ function hurtPlayer(fatal) {
     for (let i=0;i<8;i++) particles.push({ x:p.x+p.w/2, y:p.y+p.h/2, vx:(Math.random()-0.5)*250, vy:-Math.random()*250, t:0.5, col:'#ffd9ec' });
     return;
   }
+  const mate = p === p2 ? p1Of() : p2;
+  if (mate && !mate.dead && lives > 1) {
+    // co-op: colegul trăiește → pierdem o viață comună, iar cel căzut reapare lângă el în ~1,5 s (fără restart)
+    if (p !== p2) { carryBig = false; carryFire = false; }
+    lives--;
+    saveRecord();
+    sfx.hurt();
+    for (let i=0;i<10;i++) particles.push({ x:p.x+p.w/2, y:p.y+p.h/2, vx:(Math.random()-0.5)*300, vy:-Math.random()*300, t:0.6, col:charOf(p).shirt });
+    p.dead = true; p.respawnT = 1.5; p.vx = 0; p.vy = 0; p.edgeT = 0; p.starT = 0; p.wingsT = 0;
+    return;
+  }
   carryBig = false; carryFire = false;
   lives--;
   saveRecord();
   sfx.hurt();
   state = 'dead'; stateTimer = 0;
-  for (let i=0;i<10;i++) particles.push({ x:p.x+p.w/2, y:p.y+p.h/2, vx:(Math.random()-0.5)*300, vy:-Math.random()*300, t:0.6, col:CHARACTERS[charIdx].shirt });
+  for (let i=0;i<10;i++) particles.push({ x:p.x+p.w/2, y:p.y+p.h/2, vx:(Math.random()-0.5)*300, vy:-Math.random()*300, t:0.6, col:charOf(p).shirt });
 }
 
 function rectHit(a, b) {
@@ -1800,14 +2065,16 @@ function draw() {
     else drawKidOnFoot(helper.x + helper.w/2, helper.y + helper.h, helper.cfg, hh, helper.dir, helper.anim, !helper.onGround, helper.punchT > 0);
   }
 
-  if (state !== 'dead') {
-    const p = player;
+  if (state !== 'dead') for (const p of (p2 ? [p2, player] : [player])) {   // P1 desenat ultimul (deasupra)
+    if (p.dead) continue;          // cel căzut așteaptă să reapară
+    const cfgP = charOf(p);
+    if (p2) drawPlayerTag(p, cfgP);
     if (!(p.invuln > 0 && Math.floor(time*12)%2===0)) {
       const wings = p.wingsT > 0 || theme === 'nori';
       if (p.starT > 0) {   // invincibil: tot personajul în culorile curcubeului 🌈
         ctx.filter = 'hue-rotate(' + (Math.floor(time * 600) % 360) + 'deg) saturate(1.9) brightness(1.15)';
       }
-      drawKid(p.x + p.w/2, p.y + p.h, CHARACTERS[charIdx], p.h * (CHARACTERS[charIdx].vmul || 1), p.dir, p.anim, !p.onGround, wings);
+      drawKid(p.x + p.w/2, p.y + p.h, cfgP, p.h * (cfgP.vmul || 1), p.dir, p.anim, !p.onGround, wings);
       ctx.filter = 'none';
       if (theme === 'apa') drawDiveMask(p.x + p.w/2, p.y + p.h*0.16, p.dir, p.h/58);
       if (p.starT > 0) drawStarAura(p);
@@ -1836,7 +2103,7 @@ function draw() {
 
   if (state === 'helper') drawHelperSelect();
   if (state === 'dead') drawOverlay(lives > 0 ? 'Ups! 😅 Mai încearcă!' : 'Nu-i nimic! 💪 O luăm de la capăt!', '');
-  if (state === 'levelend') drawOverlay('Bravo, ' + CHARACTERS[charIdx].name + '! 🎉', levelIdx+1 < LEVELS.length ? 'Urmează: ' + LEVELS[levelIdx+1].name : 'Ai terminat totul!');
+  if (state === 'levelend') drawOverlay('Bravo, ' + CHARACTERS[charIdx].name + (p2 ? ' și ' + CHARACTERS[p2.ci].name : '') + '! 🎉', levelIdx+1 < LEVELS.length ? 'Urmează: ' + LEVELS[levelIdx+1].name : 'Ai terminat totul!');
   if (state === 'minibossdead') drawOverlay('Ai învins pe ' + bossTitle() + '! 🎉', 'Echipă grozavă! ⭐');
   if (state === 'bossdead') drawBossVictory();
   if (state === 'easteregg') drawEasterEgg();
@@ -1846,6 +2113,20 @@ function draw() {
     ctx.font = '24px "Segoe UI", Arial'; ctx.fillStyle = '#ddd';
     ctx.fillText('Y = reîncarcă jocul  •  B = ieșire din joc', W/2, H/2 + 90);
   }
+}
+
+const TAG_COL = { P1: '#2f8cff', P2: '#ff5a4f' };   // culorile jucătorilor (etichetă + HUD)
+function drawPlayerTag(p, cfg) {   // eticheta mică „P1” / „P2” deasupra capului (doar în co-op)
+  const id = p === p2 ? 'P2' : 'P1';
+  const cx = p.x + p.w/2;
+  const top = p.y + p.h - p.h * (cfg.vmul || 1) - 26 + Math.sin(time*4) * 2;
+  ctx.fillStyle = TAG_COL[id];
+  roundRect(cx - 17, top - 11, 34, 20, 7); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(cx - 5, top + 9); ctx.lineTo(cx + 5, top + 9); ctx.lineTo(cx, top + 15); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 14px "Segoe UI", Arial';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(id, cx, top);
 }
 
 function drawBackground() {
@@ -2528,7 +2809,7 @@ function drawEggItem(kind, x, y, scale) {
   else drawRabbit(x, y, scale);
 }
 function eggMessage(kind) {
-  const nume = charIdx === 0 ? 'Anto' : CHARACTERS[charIdx].name;
+  const nume = eggCi === 0 ? 'Anto' : CHARACTERS[eggCi].name;
   if (kind === 'barbie') return ['Felicitări, ' + nume + '! 🎉', 'Ai găsit o păpușă Barbie! 🪆✨'];
   if (kind === 'pompieri') return ['Felicitări, ' + nume + '! 🎉', 'Ai găsit o mașină de pompieri! 🚒'];
   if (kind === 'gantera') return ['Felicitări, ' + nume + '! 🎉', 'Ai găsit o ganteră nouă! 🏋️💪'];
@@ -4455,6 +4736,39 @@ function drawHUD() {
   if (player && player.wingsT > 0) { ctx.fillText('🪽' + Math.ceil(player.wingsT), px, 39); px -= 70; }
   if (player && player.fire) { ctx.fillText('🔥', px, 39); }
   btnFEl.style.display = (document.body.classList.contains('touch') && player && player.fire && state === 'play') ? 'flex' : 'none';
+  if (p2) {                       // caseta lui P2, sub bara de sus, în dreapta 🎮2
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,.35)';
+    roundRect(W - 300, 70, 288, 36, 10); ctx.fill();
+    ctx.fillStyle = TAG_COL.P2;
+    roundRect(W - 294, 76, 34, 24, 7); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 14px "Segoe UI", Arial';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('P2', W - 277, 88);
+    ctx.font = 'bold 20px "Segoe UI", Arial';
+    ctx.textAlign = 'left';
+    const c2 = CHARACTERS[p2.ci];
+    let t2 = (c2.emoji || '🧒') + ' ' + c2.name;
+    if (p2.dead) t2 += '  ⏳';
+    else {
+      if (p2.starT > 0) t2 += '  ⭐' + Math.ceil(p2.starT);
+      if (p2.wingsT > 0) t2 += '  🪽' + Math.ceil(p2.wingsT);
+      if (p2.fire) t2 += '  🔥';
+    }
+    ctx.fillText(t2, W - 252, 88);
+    // P1 primește și el eticheta lui lângă nume, ca să se vadă cine e cine
+    ctx.fillStyle = TAG_COL.P1;
+    const n1 = (CHARACTERS[charIdx].emoji || '🧒') + ' ' + CHARACTERS[charIdx].name;
+    ctx.font = 'bold 24px "Segoe UI", Arial';
+    const w1 = ctx.measureText(n1).width;
+    roundRect(W - 28 - w1 - 44, 27, 34, 24, 7); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 14px "Segoe UI", Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('P1', W - 28 - w1 - 27, 39);
+    ctx.restore();
+  }
   if (player && (player.starT > 0 || player.wingsT > 0)) {   // numărătoare mare, centrală, pentru super puteri
     const activeT = player.starT > 0 ? player.starT : player.wingsT;
     const icon = player.starT > 0 ? '⭐' : '🪽';
@@ -4599,6 +4913,11 @@ function drawSelect() {
   ctx.font = '24px "Segoe UI", Arial';
   ctx.fillText('⬅➡ alege  •  Enter / A 🎮 / atinge ca să pornești', W/2, 530);
   ctx.fillText('🕹️ Săgeți sau A/D = mers  •  Spațiu / ⬆ = săritură / zbor / înot', W/2, 30);
+  ctx.font = 'bold 19px "Segoe UI", Arial';
+  ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.lineWidth = 4;
+  ctx.strokeText('🎮 Al doilea controller: apasă A în joc ca să intri', W/2, 560);
+  ctx.fillStyle = '#fff6c8';
+  ctx.fillText('🎮 Al doilea controller: apasă A în joc ca să intri', W/2, 560);
 }
 
 function roundRect(x, y, w, h, r) {
@@ -4618,6 +4937,7 @@ function frame(now) {
   lastT = now;
   if (dt > 0.05) dt = 0.05;
   pollGamepad();
+  pollGamepad2();
   perfGuard(now);
   update(dt);
   draw();
