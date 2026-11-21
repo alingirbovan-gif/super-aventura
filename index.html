@@ -909,7 +909,10 @@ function pollGamepad() {
     OK: b(0) || b(9),
   };
   const edge = k => cur[k] && !gpPrev[k];
-  if (edge('L') || edge('R') || edge('OK') || edge('J') || edge('F')) audio();
+  if (edge('L') || edge('R') || edge('OK') || edge('J') || edge('F')) {
+    audio();
+    document.body.classList.remove('touch');   // cu controller nu mai arătăm butoanele de pe ecran (revin la o atingere reală)
+  }
   if (state === 'play') {
     if (edge('J')) jumpBufferT = JUMP_BUFFER;
     if (edge('F')) shootFireball();
