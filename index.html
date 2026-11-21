@@ -17,7 +17,7 @@
   html,body { width:100%; height:100%; overflow:hidden; background:#1a1a2e; touch-action:none;
     font-family:'Segoe UI', Arial, sans-serif; }
   #wrap { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
-  canvas { background:#5c94fc; image-rendering:pixelated; max-width:100%; max-height:100%;
+  canvas { background:#5c94fc; max-width:100%; max-height:100%;
     box-shadow:0 0 40px rgba(0,0,0,.6); border-radius:6px; }
   .tbtn { position:fixed; bottom:4vh; width:17vmin; height:17vmin; min-width:64px; min-height:64px;
     border-radius:50%; background:rgba(255,255,255,.18); border:3px solid rgba(255,255,255,.45);
@@ -176,8 +176,40 @@ const BOSS_HP = 16;
 
 const cv = document.getElementById('cv');
 const ctx = cv.getContext('2d');
-const W = cv.width, H = cv.height;
+const W = cv.width, H = cv.height;   // dimensiunea LOGICĂ a jocului (1024×576); desenul se scalează
 const ROWS = 12;
+
+/* ===== ECRAN MARE (TV 4K) 📺 =====
+   Jocul umple ecranul (16:9) și se desenează la rezoluția reală a ecranului, nu mărit în pixeli.
+   Dacă aparatul nu ține pasul (sub ~45 fps), coboară singur calitatea. */
+let RS = 1;                  // scala de randare: pixeli reali pe pixel logic
+let rsCap = 4;               // plafonul (scade dacă jocul merge greu)
+function fitCanvas() {
+  const vw = innerWidth, vh = innerHeight;
+  const cssW = Math.floor(Math.min(vw, vh * W / H));
+  const cssH = Math.floor(cssW * H / W);
+  cv.style.width = cssW + 'px';
+  cv.style.height = cssH + 'px';
+  const dpr = window.devicePixelRatio || 1;
+  RS = Math.max(1, Math.min(rsCap, (cssW * dpr) / W, 3840 / W));
+  const bw = Math.round(W * RS), bh = Math.round(H * RS);
+  if (cv.width !== bw || cv.height !== bh) { cv.width = bw; cv.height = bh; }
+}
+fitCanvas();
+addEventListener('resize', fitCanvas);
+addEventListener('fullscreenchange', () => setTimeout(fitCanvas, 50));
+let perfT0 = 0, perfN = 0, perfBad = 0;
+function perfGuard(now) {         // apelat în fiecare cadru, doar în timpul jocului
+  if (document.hidden || state !== 'play') { perfT0 = 0; perfN = 0; return; }
+  if (!perfT0) { perfT0 = now; perfN = 0; return; }
+  perfN++;
+  const span = (now - perfT0) / 1000;
+  if (span >= 2) {
+    const fps = perfN / span; perfT0 = now; perfN = 0;
+    perfBad = fps < 40 ? perfBad + 1 : 0;
+    if (perfBad >= 2 && RS > 1.01) { perfBad = 0; rsCap = Math.max(1, RS * 0.8); fitCanvas(); }
+  }
+}
 
 /* ================= NIVELURI =================
    # pământ  B cărămidă (se sparge)  Q bloc ?  = platformă
@@ -854,9 +886,41 @@ addEventListener('keydown', e => {
 });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
 
-function inputLeft()  { return keys['arrowleft'] || keys['a'] || touchState.L; }
-function inputRight() { return keys['arrowright'] || keys['d'] || touchState.R; }
-function inputJumpHeld() { return keys[' '] || keys['arrowup'] || keys['w'] || touchState.J; }
+function inputLeft()  { return keys['arrowleft'] || keys['a'] || touchState.L || gpState.L; }
+function inputRight() { return keys['arrowright'] || keys['d'] || touchState.R || gpState.R; }
+function inputJumpHeld() { return keys[' '] || keys['arrowup'] || keys['w'] || touchState.J || gpState.J; }
+
+/* ===== CONTROLLER (Xbox / gamepad) 🎮 =====
+   Stick stânga sau D-pad = mers; A = sărit / alege; X sau RB = bilă de foc; Start = alege. */
+const gpState = { L:false, R:false, J:false };
+const gpPrev = {};
+function pollGamepad() {
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  let gp = null;
+  for (const p of pads) if (p && p.connected) { gp = p; break; }
+  if (!gp) { gpState.L = gpState.R = gpState.J = false; return; }
+  const b = i => !!(gp.buttons[i] && gp.buttons[i].pressed);
+  const ax = gp.axes[0] || 0;
+  const cur = {
+    L: b(14) || ax < -0.4,
+    R: b(15) || ax > 0.4,
+    J: b(0) || b(12),
+    F: b(2) || b(5),
+    OK: b(0) || b(9),
+  };
+  const edge = k => cur[k] && !gpPrev[k];
+  if (edge('L') || edge('R') || edge('OK') || edge('J') || edge('F')) audio();
+  if (state === 'play') {
+    if (edge('J')) jumpBufferT = JUMP_BUFFER;
+    if (edge('F')) shootFireball();
+  } else {
+    if (edge('L')) handleMenuKey('ArrowLeft');
+    if (edge('R')) handleMenuKey('ArrowRight');
+    if (edge('OK')) handleMenuKey('Enter');
+  }
+  gpState.L = cur.L; gpState.R = cur.R; gpState.J = cur.J;
+  Object.assign(gpPrev, cur);
+}
 
 const touchState = { L:false, R:false, J:false };
 if ('ontouchstart' in window || navigator.maxTouchPoints > 0) document.body.classList.add('touch');
@@ -1626,6 +1690,7 @@ function rectHit(a, b) {
 
 /* ================= DESEN ================= */
 function draw() {
+  ctx.setTransform(RS, 0, 0, RS, 0, 0);
   drawBackground();
 
   if (state === 'select') { drawSelect(); return; }
@@ -4387,7 +4452,7 @@ function drawHelperSelect() {
   }
   ctx.fillStyle = '#fff';
   ctx.font = '24px "Segoe UI", Arial';
-  ctx.fillText('⬅➡ alege  •  Enter / atinge cardul', W/2, 530);
+  ctx.fillText('⬅➡ alege  •  Enter / A 🎮 / atinge cardul', W/2, 530);
 }
 
 function drawBossVictory() {
@@ -4470,7 +4535,7 @@ function drawSelect() {
   }
   ctx.fillStyle = '#fff';
   ctx.font = '24px "Segoe UI", Arial';
-  ctx.fillText('⬅➡ alege  •  Enter / atinge ca să pornești', W/2, 530);
+  ctx.fillText('⬅➡ alege  •  Enter / A 🎮 / atinge ca să pornești', W/2, 530);
   ctx.fillText('🕹️ Săgeți sau A/D = mers  •  Spațiu / ⬆ = săritură / zbor / înot', W/2, 30);
 }
 
@@ -4490,6 +4555,8 @@ function frame(now) {
   let dt = (now - lastT) / 1000;
   lastT = now;
   if (dt > 0.05) dt = 0.05;
+  pollGamepad();
+  perfGuard(now);
   update(dt);
   draw();
   requestAnimationFrame(frame);
