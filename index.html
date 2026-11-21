@@ -2017,7 +2017,7 @@ function draw() {
   if (btnHomeEl.style.display !== homeDisp) btnHomeEl.style.display = homeDisp;
   drawBackground();
 
-  if (state === 'select') { drawSelect(); return; }
+  if (state === 'select') { drawSelect(); drawSnow(true); return; }
 
   ctx.save();
   const fcam = Math.floor(camX);
@@ -2102,6 +2102,7 @@ function draw() {
   ctx.restore();
 
   drawForeground();                 // 3D: iarba din prim-plan (doar jos de tot)
+  drawSnow();                       // ❄️ e iarnă: ninge pe nivelurile de afară
   drawLightOverlay();               // 3D: lumină din stânga-sus + vignetă (sub HUD)
   drawHUD();
   if ((boss && state !== 'minibossdead' && state !== 'bossdead') || state === 'helper') drawBossBar();
@@ -2465,7 +2466,10 @@ function tileSprite(t, col) {    // fața din față a dalei, randată o dată l
   return d3Tiles[key] = c;
 }
 // Trecerea 2: fețele din față, în pixeli reali (poziții rotunjite → fără fante între dale).
+const SNOW_CAP_T = { 1:1, 2:1, 3:1, 4:1, 10:1, 11:1 };   // ce blocuri primesc zăpadă deasupra
+const snowQ = [];
 function drawTilesFront(c0, c1, fcam) {
+  const snowCaps = !SNOW_OFF[theme];
   const pd = Math.round(D3_PAD * RS);
   d3Q.length = 0;
   ctx.save();
@@ -2480,7 +2484,25 @@ function drawTilesFront(c0, c1, fcam) {
       const X0 = Math.round((c*TILE - fcam)*RS), X1 = Math.round(((c+1)*TILE - fcam)*RS);
       ctx.drawImage(tileSprite(t, c), X0 - pd, Y0 - pd, X1 - X0 + 2*pd, Y1 - Y0 + 2*pd);
       if (t === 3) d3Q.push(c, r);
+      if (snowCaps && SNOW_CAP_T[t] && (r === 0 || !grid[r-1][c])) snowQ.push(X0, X1, Y0, c);
     }
+  }
+  if (snowQ.length) {            // ❄️ strat de zăpadă pe blocurile care au cer deasupra
+    const hh = 6 * RS, rr = 3 * RS;
+    ctx.fillStyle = '#f7fbff';
+    ctx.beginPath();
+    for (let i = 0; i < snowQ.length; i += 4) {
+      const X0 = snowQ[i], X1 = snowQ[i+1], Y0 = snowQ[i+2], c = snowQ[i+3];
+      ctx.rect(X0, Y0 - hh*0.5, X1 - X0, hh);
+      const dx = X0 + ((c * 37) % 30 + 9) * RS;                 // un „țurțure" moale, mereu în același loc
+      ctx.moveTo(dx + rr, Y0 + hh*0.5); ctx.arc(dx, Y0 + hh*0.5, rr, 0, Math.PI);
+    }
+    ctx.fill();
+    ctx.fillStyle = 'rgba(160,190,230,.45)';                   // umbra albăstruie sub zăpadă
+    ctx.beginPath();
+    for (let i = 0; i < snowQ.length; i += 4) ctx.rect(snowQ[i], snowQ[i+2] + hh*0.5, snowQ[i+1] - snowQ[i], Math.max(1, RS));
+    ctx.fill();
+    snowQ.length = 0;
   }
   ctx.restore();
   if (d3Q.length) {              // semnul „?” care sare, cu umbră ca un relief
@@ -2660,6 +2682,34 @@ function drawForeground() {
   ctx.globalAlpha = 0.6;
   ctx.drawImage(d3ForeC, off, H - 40, 1025, 40);
   ctx.drawImage(d3ForeC, off + 1024, H - 40, 1025, 40);
+  ctx.globalAlpha = 1;
+}
+/* ===== NINSOARE ❄️ (iarna) =====
+   Fulgi pe 3 adâncimi (cei apropiați mai mari, mai repezi, mai opaci), cu legănare și paralaxă după cameră.
+   Poziția fiecărui fulg e calculată din timp, deci nu ține stare. Nu ninge sub apă și în subteran. */
+const SNOW_OFF = { apa: true, subteran: true };
+const SNOW = [];
+for (let i = 0; i < 140; i++) {
+  const z = i < 70 ? 0.35 : i < 115 ? 0.65 : 1;     // adâncimea: departe / mijloc / aproape
+  SNOW.push({
+    x: Math.random() * (W + 40), y: Math.random() * (H + 40), z,
+    r: (1.2 + Math.random() * 1.3) * (0.6 + z * 0.9),
+    v: (28 + Math.random() * 22) * (0.5 + z),       // viteza de cădere (px/s)
+    sw: 6 + Math.random() * 14, sf: 0.6 + Math.random() * 1.2, ph: Math.random() * 6.28,
+  });
+}
+function drawSnow(selectScreen) {
+  if (!selectScreen && SNOW_OFF[theme]) return;
+  const cam = selectScreen ? 0 : camX;
+  const SW = W + 40, SH = H + 40;
+  ctx.fillStyle = '#fff';
+  for (const f of SNOW) {
+    let x = (f.x - cam * f.z * 0.6 + Math.sin(time * f.sf + f.ph) * f.sw) % SW;
+    if (x < 0) x += SW;
+    const y = (f.y + time * f.v) % SH;
+    ctx.globalAlpha = 0.35 + f.z * 0.5;
+    ctx.beginPath(); ctx.arc(x - 20, y - 20, f.r, 0, 6.2832); ctx.fill();
+  }
   ctx.globalAlpha = 1;
 }
 function drawLightOverlay() {    // lumină caldă din stânga-sus, umbră rece în dreapta-jos + vignetă discretă
